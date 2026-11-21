@@ -83,7 +83,7 @@ Cheapest first. The first rungs shape what the model writes; the middle ones che
 
 ### Citations: check quoted text against its source mechanically
 
-- **Source:** one operator's practice: this repo's [quote check](../../scripts/check_quotes.py) fetches the pages a document links and checks that each quoted passage is in one of them, on every pull request that changes a markdown file ([`quote-check.yml`](../../.github/workflows/quote-check.yml)).
+- **Source:** one operator's practice, until 2026-11-22: this repo's [quote check](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/scripts/check_quotes.py) fetches the pages a document links and checks that each quoted passage is in one of them, on every pull request that changes a markdown file ([`quote-check.yml`](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/.github/workflows/quote-check.yml)).
 - **Cost:** CI minutes and page fetches on every run.
 - **Breaks when:** The page cannot be fetched, which the check reports but does not fail on; it fails only when a passage is not found. It checks wording, not whether the claim around the quote matches the source, and a paraphrase gives it nothing to check.
 

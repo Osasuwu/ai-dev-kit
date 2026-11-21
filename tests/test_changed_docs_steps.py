@@ -1,6 +1,6 @@
-"""The changed-file list in the link-check and quote-check workflow steps (#293).
+"""The changed-file list in the link-check workflow step (#293).
 
-Both steps list the markdown files a PR changed with `git diff` and pass them to a script. Each
+The step lists the markdown files a PR changed with `git diff` and passes them to a script. Each
 `run:` block is executed under bash with a stand-in `python`, as in test_check_links.py: a list
 that cannot be read must fail the step, never pass it with no files checked, and a path with
 non-ASCII characters must reach the script as it is, not in git's quoted form.
@@ -20,7 +20,6 @@ import pytest
 WORKFLOWS = Path(__file__).parent.parent / ".github" / "workflows"
 STEPS = [
     ("link-check.yml", "Check links in changed docs", "scripts/check_links.py"),
-    ("quote-check.yml", "Check quotes in changed docs", "scripts/check_quotes.py"),
 ]
 
 

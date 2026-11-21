@@ -22,8 +22,8 @@ the reviewer's job. In GitHub Actions the report is also added to the job summar
 (``$GITHUB_STEP_SUMMARY``).
 
 The links are inline markdown link targets (``[text](target)`` or ``[text](<target>)``, with an
-optional double-quoted title) and bare http(s) URLs, in the paragraphs ``check_quotes.py``
-reads: outside code fences and HTML comments. In-page ``#anchor`` links, empty targets and
+optional double-quoted title) and bare http(s) URLs, in the paragraphs ``md_paragraphs.py``
+finds: outside code fences and HTML comments. In-page ``#anchor`` links, empty targets and
 anything inside inline code are left out. An angle-bracket target may hold spaces; a web one is
 fetched with each space as ``%20``. A bare URL stops at a ``|`` and before the first ``)`` it did
 not open, and loses the punctuation and markup after it (``**``, ``'``, ``.``). Not parsed as
@@ -45,7 +45,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import unquote
 
-from check_quotes import paragraphs
+from md_paragraphs import paragraphs
 
 ALIVE, DEAD, NOT_VERIFIED = "alive", "dead", "not verified"
 DEAD_STATUSES = (404, 410)
@@ -54,7 +54,7 @@ HEADER = "whether each link in the changed docs resolves. It does not check what
 
 _SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 _CODE_SPAN_RE = re.compile(r"(`+).+?\1", re.S)
-# [text](<target>), which may hold spaces, or [text](target): check_quotes' _LINK_RE.
+# [text](<target>), which may hold spaces, or [text](target): md_paragraphs' _LINK_RE.
 _TARGET_RE = re.compile(
     r"\[[^\]]*\]\((?:<([^<>\n]*)>|((?:[^()\s]|\([^()\s]*\))+))(?:\s+\"[^\"]*\")?\)"
 )
