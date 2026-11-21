@@ -102,7 +102,7 @@ def fetch_status(url: str) -> int:
     answered. Other failures propagate, a temporary lookup failure among them."""
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "ai-dev-failure-classes check_links", "Accept": "*/*"},
+        headers={"User-Agent": "ai-dev-kit check_links", "Accept": "*/*"},
     )
     for attempt in range(2):
         try:

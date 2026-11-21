@@ -121,7 +121,7 @@ The rungs follow the rule's own order: limit the reach, then make the effect rev
 
 ### Approval: hold the change behind a required check until a person reads it
 
-- **Source:** one operator's practice. Until 2026-11-22 this repository held any pull request that touches the paths listed in [`.github/hold-paths.json`](../../.github/hold-paths.json) with a required check, [`waiting-human-review`](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/.github/workflows/waiting-human-review.yml), that did not pass until a person had read it; a pull request still in draft was held the same way.
+- **Source:** one operator's practice. Until 2026-11-22 this repository held any pull request that touches the paths listed in [`.github/hold-paths.json`](../../.github/hold-paths.json) with a required check, [`waiting-human-review`](https://github.com/Osasuwu/ai-dev-kit/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/.github/workflows/waiting-human-review.yml), that did not pass until a person had read it; a pull request still in draft was held the same way.
 - **Cost:** The reviewer's time, and a wait on every pull request that touches those paths.
 - **Breaks when:** A person with administrator rights merges around the check. It also breaks when the path definition omits a location the effect can come through, or when the check cannot run on a change to its own workflow.
 
