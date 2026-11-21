@@ -12,6 +12,15 @@ The contract this gate checks is frozen since the third calibration doc merged (
 calibration doc): a change to it needs a new amendment there and the migration of every class doc
 already written. It checks structure only; ladder order, injection payloads and Evidence dates are out
 of scope for it.
+
+It also checks the practice cards under `cards/` (#340), selected through the same path
+definition. The card format is read from `cards/README.md` (kinds, index line limit, field
+table), not hard-coded here; see that file for what each card carries.
+
+    python tests/structure_gate.py [root]
+
+checks the tree, lists the card files it checked and every violation, and exits 1 on any.
+The structure-gate workflow runs it, so its log names the cards each PR's run looked at.
 """
 
 from __future__ import annotations
@@ -19,7 +28,9 @@ from __future__ import annotations
 import csv
 import json
 import re
+import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 # D24 describes the cap qualitatively ("the two-hour unit") with no numeric value recorded
@@ -58,6 +69,21 @@ _SECTION_RE = re.compile(r"^## +(.+?) *$", re.MULTILINE)
 _RUNG_RE = re.compile(r"^### +(.+?) *$", re.MULTILINE)
 # A cost line that states a figure must carry "(as of YYYY-MM, <source>)".
 _DATED_SOURCE_RE = re.compile(r"\(as of \d{4}-(?:0[1-9]|1[0-2]), *[^)\s][^)]*\)")
+
+CARDS_DIR = "cards"
+CARD_FORMAT_FILE = "cards/README.md"
+CARD_FIELD_PLACES = ("frontmatter", "section")
+CARD_KIND_FIELD = "kind"
+CARD_DATE_FIELD = "last_reviewed"
+CARD_LEARN = "Learn"
+CARD_EVIDENCE = ("Evidence for", "Evidence against")
+CARD_GUARDS = "Guards"
+# A field-table row: | `name` | where | kinds | meaning |
+_FORMAT_ROW_RE = re.compile(r"^\| *`([^`]+)` *\|([^|]*)\|([^|]*)\|", re.MULTILINE)
+_TITLE_RE = re.compile(r"^# +(\S.*?) *$", re.MULTILINE)
+_BULLET_RE = re.compile(r"^[-*] ")
+_DATED_BULLET_RE = re.compile(r"^[-*] +(\d{4}-\d{2}-\d{2}):")
+_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 @dataclass(frozen=True)
@@ -466,12 +492,227 @@ def _check_class_docs(
             _check_class_doc(root, doc_path, vocab, classes, violations)
 
 
-def check_tree(root: Path) -> list[Violation]:
+# --- practice cards (#340) ----------------------------------------------------
+#
+# The card format is cards/README.md itself: the gate reads the kinds, the index line limit and
+# the field table from it, so the doc a person edits is the contract checked here. What the gate
+# adds on top is the value checks named in that doc: the kind is listed, the review date is a
+# date, Learn has a link, evidence bullets are dated, Guards links are class docs.
+
+
+@dataclass(frozen=True)
+class CardField:
+    name: str
+    where: str  # "frontmatter" or "section"
+    kinds: str | tuple[str, ...]  # "all", "optional", or the kinds that carry it
+
+
+@dataclass(frozen=True)
+class CardFormat:
+    kinds: tuple[str, ...]
+    index_line_limit: int
+    fields: tuple[CardField, ...]
+
+
+def _read_text(path: Path) -> str:
+    return path.read_bytes().decode("utf-8").replace("\r\n", "\n")
+
+
+def load_card_format(root: Path, violations: list[Violation]) -> CardFormat | None:
+    """Read cards/README.md; None (with violations) when the gate cannot use it."""
+    root = Path(root)
+    path = root / CARD_FORMAT_FILE
+    if not path.is_file():
+        violations.append(
+            Violation(
+                CARD_FORMAT_FILE,
+                "required_file_missing",
+                f"{CARD_FORMAT_FILE} is missing; the gate reads the card format from it",
+            )
+        )
+        return None
+    text = _read_text(path)
+    errors: list[Violation] = []
+
+    def bad(what: str, message: str) -> None:
+        errors.append(
+            Violation(
+                CARD_FORMAT_FILE,
+                f"card_format_invalid:{what}",
+                f"{CARD_FORMAT_FILE}: {message}",
+            )
+        )
+
+    kinds_value = _field(text, "Kinds") or ""
+    kinds = tuple(k.strip() for k in kinds_value.split(",") if k.strip())
+    if not kinds:
+        bad("kinds", "needs a '- **Kinds:** <kind>, <kind>' line")
+    limit_value = _field(text, "Index line limit") or ""
+    if not (limit_value.isdigit() and int(limit_value) > 0):
+        bad(
+            "index_line_limit",
+            "needs a '- **Index line limit:** <positive whole number>' line",
+        )
+    fields: list[CardField] = []
+    for match in _FORMAT_ROW_RE.finditer(_sections(text).get("fields", "")):
+        name, where, spec = (g.strip() for g in match.groups())
+        tokens = [t.strip() for t in spec.split(",") if t.strip()]
+        if tokens in (["all"], ["optional"]):
+            spec_value: str | tuple[str, ...] = tokens[0]
+        elif tokens and (not kinds or all(t in kinds for t in tokens)):
+            spec_value = tuple(tokens)
+        else:
+            bad(name, f"field '{name}': Kinds must be all, optional or listed kinds")
+            continue
+        if where not in CARD_FIELD_PLACES:
+            bad(name, f"field '{name}': Where must be frontmatter or section")
+            continue
+        fields.append(CardField(name, where, spec_value))
+    if not any(
+        f.name == CARD_KIND_FIELD and f.where == "frontmatter" and f.kinds == "all"
+        for f in fields
+    ):
+        bad(
+            CARD_KIND_FIELD,
+            f"the field table needs a '{CARD_KIND_FIELD}' frontmatter row for all kinds",
+        )
+    if errors:
+        violations.extend(errors)
+        return None
+    return CardFormat(kinds, int(limit_value), tuple(fields))
+
+
+def read_card(text: str) -> tuple[dict, str | None, dict[str, str]]:
+    """(frontmatter fields, title, sections) of a card's text."""
+    fields = _parse_frontmatter(text)
+    end = text.find("\n---", 4) if text.startswith("---\n") else -1
+    body = text[end + 4 :] if end != -1 else text
+    title = _TITLE_RE.search(body)
+    return fields, (title.group(1) if title else None), _sections(body)
+
+
+def _is_date(value: str) -> bool:
+    if not _DATE_RE.fullmatch(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _card_has(field: CardField, fields: dict, sections: dict[str, str]) -> bool:
+    if field.where == "frontmatter":
+        return bool(fields.get(field.name))
+    return bool(sections.get(field.name.lower(), "").strip())
+
+
+def _is_class_doc(card_path: Path, link: str, root: Path) -> bool:
+    if "://" in link or link.startswith(("#", "mailto:")):
+        return False
+    target = (card_path.parent / link).resolve()
+    return (
+        target.is_file()
+        and target.suffix == ".md"
+        and target.parent == (root / CLASS_DOCS_DIR).resolve()
+    )
+
+
+def _check_card(
+    root: Path, card_path: Path, fmt: CardFormat, violations: list[Violation]
+) -> None:
+    rel = _rel(card_path, root)
+    text = _read_text(card_path)
+    fields, title, sections = read_card(text)
+
+    def add(code: str, message: str) -> None:
+        violations.append(Violation(rel, code, f"{rel} {message}"))
+
+    if title is None:
+        add("card_missing_title", "has no '# <title>' line after the frontmatter")
+    kind = fields.get(CARD_KIND_FIELD)
+    kind_known = isinstance(kind, str) and kind in fmt.kinds
+    if kind and not kind_known:
+        add(
+            "card_kind_unknown",
+            f"has kind '{kind}', not one of {', '.join(fmt.kinds)} ({CARD_FORMAT_FILE})",
+        )
+    for field in fmt.fields:
+        if field.kinds == "all":
+            required, allowed = True, True
+        elif field.kinds == "optional":
+            required, allowed = False, True
+        elif kind_known:
+            required = allowed = kind in field.kinds
+        else:
+            continue  # no known kind to judge a per-kind field against
+        present = _card_has(field, fields, sections)
+        if required and not present:
+            add(f"card_missing_field:{field.name}", f"has no '{field.name}' field")
+        elif present and not allowed:
+            add(
+                f"card_field_not_allowed:{field.name}",
+                f"is a {kind} card; '{field.name}' is only for {', '.join(field.kinds)}",
+            )
+    reviewed = fields.get(CARD_DATE_FIELD)
+    if reviewed and not (isinstance(reviewed, str) and _is_date(reviewed)):
+        add(
+            f"card_bad_date:{CARD_DATE_FIELD}",
+            f"has {CARD_DATE_FIELD} '{reviewed}', not a YYYY-MM-DD date",
+        )
+    learn = sections.get(CARD_LEARN.lower(), "")
+    if learn.strip() and not _MARKDOWN_LINK_RE.search(learn):
+        add("card_learn_no_link", f"has no link under '{CARD_LEARN}'")
+    for name in CARD_EVIDENCE:
+        section = sections.get(name.lower(), "")
+        if not section.strip():
+            continue
+        bullets = [line for line in section.splitlines() if _BULLET_RE.match(line)]
+        dated = [
+            m and _is_date(m.group(1))
+            for m in (_DATED_BULLET_RE.match(line) for line in bullets)
+        ]
+        if not bullets or not all(dated):
+            add(
+                f"card_evidence_undated:{name}",
+                f"has a '{name}' entry that is not a bullet opening with 'YYYY-MM-DD:'",
+            )
+    guards = sections.get(CARD_GUARDS.lower(), "")
+    if guards.strip():
+        links = _MARKDOWN_LINK_RE.findall(guards)
+        if not links or not all(_is_class_doc(card_path, link, root) for link in links):
+            add(
+                "card_guard_not_a_class",
+                f"has a '{CARD_GUARDS}' entry that is not a link to a doc in {CLASS_DOCS_DIR}/",
+            )
+    for link in _MARKDOWN_LINK_RE.findall(text):
+        if "://" in link or link.startswith(("#", "mailto:")):
+            continue
+        if not (card_path.parent / link).resolve().exists():
+            add("card_link_unresolvable", f"links '{link}', which does not resolve")
+
+
+def card_paths(root: Path, definition: dict) -> list[Path]:
+    """The cards: every .md under cards/ that the path definition holds, but the format file."""
+    root = Path(root)
+    cards_dir = root / CARDS_DIR
+    if not cards_dir.is_dir():
+        return []
+    return [
+        path
+        for path in sorted(cards_dir.rglob("*.md"))
+        if _rel(path, root) != CARD_FORMAT_FILE
+        and is_hold_path(_rel(path, root), definition)
+    ]
+
+
+def _check(root: Path) -> tuple[list[Violation], list[str]]:
+    """(violations, the card files that were checked)."""
     root = Path(root)
     violations: list[Violation] = []
     definition = _load_hold_paths(root, violations)
     vocab = _load_vocabularies(root, violations)
-    for directory in (CLASS_DOCS_DIR, DATASET_DIR):
+    for directory in (CLASS_DOCS_DIR, DATASET_DIR, CARDS_DIR):
         if not (root / directory).is_dir():
             violations.append(
                 Violation(
@@ -485,6 +726,41 @@ def check_tree(root: Path) -> list[Violation]:
         if (root / DATASET_DIR).is_dir()
         else None
     )
+    checked: list[str] = []
     if definition is not None:
         _check_class_docs(root, definition, vocab, classes, violations)
-    return violations
+        if (root / CARDS_DIR).is_dir():
+            fmt = load_card_format(root, violations)
+            if fmt is not None:
+                for card in card_paths(root, definition):
+                    _check_card(root, card, fmt, violations)
+                    checked.append(_rel(card, root))
+    return violations, checked
+
+
+def check_tree(root: Path) -> list[Violation]:
+    return _check(root)[0]
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Check the tree and print the card files checked, so the CI log lists them.
+
+    python tests/structure_gate.py [root]     # root defaults to the repository
+    """
+    args = sys.argv[1:] if argv is None else argv
+    root = Path(args[0]) if args else Path(__file__).resolve().parent.parent
+    violations, checked = _check(root)
+    print(f"structure gate: {len(checked)} card file(s) checked")
+    for rel in checked:
+        print(f"  {rel}")
+    for v in violations:
+        print(f"{v.path}: {v.code}: {v.message}")
+    if violations:
+        print(f"structure gate: {len(violations)} violation(s)")
+        return 1
+    print("structure gate: no violations")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

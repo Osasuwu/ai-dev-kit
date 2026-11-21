@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from structure_gate import check_tree
+from structure_gate import check_tree, main
 
 FIXTURES = Path(__file__).parent / "fixtures" / "structure_gate"
 VALID = FIXTURES / "valid"
@@ -55,7 +55,7 @@ def test_real_tree_passes_structure_gate():
 # --- a scanned directory that does not exist ---------------------------------
 
 
-@pytest.mark.parametrize("missing", ["docs/classes", "incidents"])
+@pytest.mark.parametrize("missing", ["docs/classes", "incidents", "cards"])
 def test_a_missing_scanned_directory_fails_and_names_it(tmp_path, missing):
     root = _tree(tmp_path)
     shutil.rmtree(root / missing)
@@ -461,3 +461,243 @@ def test_a_quoted_cell_with_a_comma_is_one_cell(tmp_path):
     root = _tree(tmp_path)
     assert '"private, not verifiable"' in (root / DATASET).read_text(encoding="utf-8")
     assert check_tree(root) == []
+
+
+# --- practice cards (#340) ----------------------------------------------------
+
+FORMAT = "cards/README.md"
+CONFIG_CARD = "cards/require-checks.md"
+HABIT_CARD = "cards/run-the-app.md"
+BELIEF_CARD = "cards/tests-miss-erosion.md"
+
+
+@pytest.mark.parametrize(
+    ("field", "line"),
+    [
+        ("kind", "kind: config\n"),
+        (
+            "why",
+            "why: A check that is not required can fail and the merge still goes through.\n",
+        ),
+        ("applies_when", "applies_when: changes merge through a branch rule\n"),
+        ("last_reviewed", "last_reviewed: 2026-11-01\n"),
+    ],
+)
+def test_a_card_without_a_required_frontmatter_field_fails(tmp_path, field, line):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, line, "")
+    assert _violations(root) == [(CONFIG_CARD, f"card_missing_field:{field}")]
+
+
+@pytest.mark.parametrize(
+    ("section", "start", "end"),
+    [
+        ("Check", "## Check\n", "## Fix\n"),
+        ("Fix", "## Fix\n", "## Learn\n"),
+        ("Learn", "## Learn\n", "## Evidence for\n"),
+        ("Evidence for", "## Evidence for\n", "## Evidence against\n"),
+        ("Evidence against", "## Evidence against\n", "## Guards\n"),
+    ],
+)
+def test_a_card_without_a_required_section_fails(tmp_path, section, start, end):
+    root = _tree(tmp_path)
+    _cut(root, CONFIG_CARD, start, end)
+    assert _violations(root) == [(CONFIG_CARD, f"card_missing_field:{section}")]
+
+
+def test_a_card_with_a_required_section_left_empty_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "Read the required list back from the platform.\n", "")
+    assert _violations(root) == [(CONFIG_CARD, "card_missing_field:Check")]
+
+
+def test_a_card_without_a_title_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "# Require the checks you merge on\n", "")
+    assert _violations(root) == [(CONFIG_CARD, "card_missing_title")]
+
+
+def test_a_fix_is_allowed_only_on_the_kinds_the_format_names(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, HABIT_CARD, "## Learn\n", "## Fix\n\nDo it.\n\n## Learn\n")
+    assert _violations(root) == [(HABIT_CARD, "card_field_not_allowed:Fix")]
+
+
+def test_an_optional_section_may_be_left_out(tmp_path):
+    root = _tree(tmp_path)
+    assert "## Guards" not in (root / BELIEF_CARD).read_text(encoding="utf-8")
+    text = (root / HABIT_CARD).read_text(encoding="utf-8")
+    (root / HABIT_CARD).write_bytes(text[: text.index("## Guards\n")].encode("utf-8"))
+    assert check_tree(root) == []
+
+
+def test_a_kind_outside_the_format_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, BELIEF_CARD, "kind: belief", "kind: opinion")
+    # An unknown kind is the one finding: no per-kind field is judged against it.
+    assert _violations(root) == [(BELIEF_CARD, "card_kind_unknown")]
+
+
+@pytest.mark.parametrize("value", ["2026-13-01", "2026-02-30", "last week", "2026-11"])
+def test_a_last_reviewed_that_is_not_a_real_date_fails(tmp_path, value):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "last_reviewed: 2026-11-01", f"last_reviewed: {value}")
+    assert _violations(root) == [(CONFIG_CARD, "card_bad_date:last_reviewed")]
+
+
+def test_learn_without_a_link_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        CONFIG_CARD,
+        "- [Protected branches](https://example.com/protected-branches): what",
+        "- Protected branches: what",
+    )
+    assert _violations(root) == [(CONFIG_CARD, "card_learn_no_link")]
+
+
+@pytest.mark.parametrize(
+    ("section", "old", "new"),
+    [
+        ("Evidence for", "- 2026-10-15: a second case", "- a second case"),
+        (
+            "Evidence for",
+            "- 2026-10-15: a second case",
+            "- 2026-10-32: a second case",
+        ),
+        (
+            "Evidence against",
+            "- 2026-10-15: running the app",
+            "- 2026-1015: running the app",
+        ),
+    ],
+)
+def test_an_evidence_bullet_without_a_real_date_fails(tmp_path, section, old, new):
+    root = _tree(tmp_path)
+    _edit(root, HABIT_CARD, old, new)
+    assert _violations(root) == [(HABIT_CARD, f"card_evidence_undated:{section}")]
+
+
+def test_an_evidence_section_with_text_but_no_bullet_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "- 2026-11-01: none found.", "None found.")
+    assert _violations(root) == [
+        (CONFIG_CARD, "card_evidence_undated:Evidence against")
+    ]
+
+
+def test_a_guards_link_that_is_not_a_class_doc_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "(../docs/classes/alpha.md)", "(run-the-app.md)")
+    assert _violations(root) == [(CONFIG_CARD, "card_guard_not_a_class")]
+
+
+def test_a_guards_section_without_a_link_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "- [alpha](../docs/classes/alpha.md)", "- alpha")
+    assert _violations(root) == [(CONFIG_CARD, "card_guard_not_a_class")]
+
+
+def test_a_relative_link_in_a_card_that_resolves_to_no_file_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        CONFIG_CARD,
+        "Add each check to the branch rule.",
+        "See [here](missing.md).",
+    )
+    assert _violations(root) == [(CONFIG_CARD, "card_link_unresolvable")]
+
+
+def test_the_card_fields_come_from_the_format_file_not_from_the_gate(tmp_path):
+    root = _tree(tmp_path)
+    # A row added to the format's table is a field every card of the named kind must carry...
+    _edit(
+        root,
+        FORMAT,
+        "| `Guards` |",
+        "| `Cost` | section | habit | What it costs. |\n| `Guards` |",
+    )
+    assert _violations(root) == [(HABIT_CARD, "card_missing_field:Cost")]
+    # ...and a kind dropped from the format's list is a kind no card may have.
+    _edit(root, FORMAT, "| `Cost` | section | habit | What it costs. |\n", "")
+    _edit(root, FORMAT, "Kinds:** config, habit, belief", "Kinds:** config, habit")
+    assert _violations(root) == [(BELIEF_CARD, "card_kind_unknown")]
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "code"),
+    [
+        ("- **Kinds:** config, habit, belief\n", "", "card_format_invalid:kinds"),
+        (
+            "- **Index line limit:** 12",
+            "- **Index line limit:** twelve",
+            "card_format_invalid:index_line_limit",
+        ),
+        (
+            "| `kind` | frontmatter | all | The kind. |\n",
+            "",
+            "card_format_invalid:kind",
+        ),
+        (
+            "| `Fix` | section | config |",
+            "| `Fix` | section | configs |",
+            "card_format_invalid:Fix",
+        ),
+        (
+            "| `Fix` | section | config |",
+            "| `Fix` | sidebar | config |",
+            "card_format_invalid:Fix",
+        ),
+    ],
+)
+def test_a_format_file_the_gate_cannot_read_fails_and_names_what(
+    tmp_path, old, new, code
+):
+    root = _tree(tmp_path)
+    _edit(root, FORMAT, old, new)
+    assert _violations(root) == [(FORMAT, code)]
+
+
+def test_a_missing_format_file_fails(tmp_path):
+    root = _tree(tmp_path)
+    (root / FORMAT).unlink()
+    assert _violations(root) == [(FORMAT, "required_file_missing")]
+
+
+def test_the_gate_selects_cards_by_the_hold_path_definition(tmp_path):
+    root = _tree(tmp_path)
+    (root / "cards" / "draft.md").write_text("# A note, not a card\n", encoding="utf-8")
+    assert ("cards/draft.md", "card_missing_field:kind") in _violations(root)
+    # Excluding the file in the definition takes it out of the gate's selection.
+    definition = json.loads((root / HOLD_PATHS).read_text(encoding="utf-8"))
+    definition["excluded_prefixes"].append("cards/draft.md")
+    (root / HOLD_PATHS).write_text(json.dumps(definition), encoding="utf-8")
+    assert check_tree(root) == []
+
+
+def test_the_format_file_is_not_checked_as_a_card(tmp_path):
+    root = _tree(tmp_path)
+    assert "kind:" not in (root / FORMAT).read_text(encoding="utf-8")
+    assert check_tree(root) == []
+
+
+def test_the_command_line_lists_the_card_files_it_checked(capsys):
+    assert main([str(VALID)]) == 0
+    assert capsys.readouterr().out == (
+        "structure gate: 3 card file(s) checked\n"
+        "  cards/require-checks.md\n"
+        "  cards/run-the-app.md\n"
+        "  cards/tests-miss-erosion.md\n"
+        "structure gate: no violations\n"
+    )
+
+
+def test_the_command_line_fails_and_prints_each_violation(tmp_path, capsys):
+    root = _tree(tmp_path)
+    _edit(root, CONFIG_CARD, "kind: config\n", "")
+    assert main([str(root)]) == 1
+    assert capsys.readouterr().out.splitlines()[-2:] == [
+        f"{CONFIG_CARD}: card_missing_field:kind: {CONFIG_CARD} has no 'kind' field",
+        "structure gate: 1 violation(s)",
+    ]
