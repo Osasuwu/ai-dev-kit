@@ -80,7 +80,8 @@ def test_the_skeleton_passes_the_gate_it_describes(tmp_path):
     (root / "docs" / "classes").mkdir(parents=True)
     (root / ".github").mkdir()
     (root / "incidents").mkdir()
-    for rel in (VOCABULARIES_FILE, ".github/hold-paths.json"):
+    (root / "cards").mkdir()
+    for rel in (VOCABULARIES_FILE, ".github/hold-paths.json", "cards/README.md"):
         (root / rel).write_bytes((REPO_ROOT / rel).read_bytes())
     (root / "docs" / "classes" / "example-class.md").write_text(doc, encoding="utf-8")
     values = {
