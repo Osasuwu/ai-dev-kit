@@ -16,4 +16,5 @@ jobs:
       - name: Run structure gate test
         run: python -m pytest tests/test_structure_gate.py -v
       - name: Check the repository and list the card files checked
+        if: ${{ !cancelled() }}
         run: python tests/structure_gate.py

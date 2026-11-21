@@ -12,10 +12,12 @@ Writes two files at the repository root from the cards in `cards/`:
     python scripts/generate_card_index.py            # rewrite both files
     python scripts/generate_card_index.py --check    # exit 1 if either file would change
 
-Inputs, none hard-coded here: the card format in `cards/README.md` (kinds, index line limit),
-the path definition in `.github/hold-paths.json` (which files under `cards/` are cards), and the
-cards. It imports the structure gate's readers from `tests/structure_gate.py`, so the gate and
-the generator read a card the same way. Card-relative links are rewritten to be relative to
+Inputs: the card format in `cards/README.md` (kinds, index line limit), the path definition in
+`.github/hold-paths.json` (which files under `cards/` are cards), and the cards. The field names
+it reads (`kind`, `why`, `applies_when`, `Learn`, `Guards`) are the structure gate's constants,
+and the gate's format reader refuses a `cards/README.md` that drops any of them, so a rename in
+the format alone fails here instead of emptying a column. It imports the structure gate's
+readers from `tests/structure_gate.py`, so the gate and the generator read a card the same way. Card-relative links are rewritten to be relative to
 the root, where both files live.
 
 Install: nothing to install; Python 3.12+ and the standard library.
@@ -36,10 +38,12 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tests"))
 
 from structure_gate import (  # noqa: E402
+    CARD_APPLIES,
     CARD_FORMAT_FILE,
     CARD_GUARDS,
     CARD_KIND_FIELD,
     CARD_LEARN,
+    CARD_WHY,
     _load_hold_paths,
     _read_text,
     _rel,
@@ -109,8 +113,8 @@ def _index_line(rel: str, fields: dict, title: str, sections: dict[str, str]) ->
     parts = [
         f"- {fields[CARD_KIND_FIELD]}",
         f"[{title}]({rel})",
-        str(fields.get("why", "")),
-        f"when {fields.get('applies_when', '')}",
+        str(fields.get(CARD_WHY, "")),
+        f"when {fields.get(CARD_APPLIES, '')}",
     ]
     guards = [
         f"[{text}]({_from_root(rel, target)})"

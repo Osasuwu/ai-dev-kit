@@ -74,12 +74,26 @@ CARDS_DIR = "cards"
 CARD_FORMAT_FILE = "cards/README.md"
 CARD_FIELD_PLACES = ("frontmatter", "section")
 CARD_KIND_FIELD = "kind"
+CARD_WHY = "why"
+CARD_APPLIES = "applies_when"
 CARD_DATE_FIELD = "last_reviewed"
 CARD_LEARN = "Learn"
 CARD_EVIDENCE = ("Evidence for", "Evidence against")
 CARD_GUARDS = "Guards"
-# A field-table row: | `name` | where | kinds | meaning |
-_FORMAT_ROW_RE = re.compile(r"^\| *`([^`]+)` *\|([^|]*)\|([^|]*)\|", re.MULTILINE)
+# The fields the value checks below and scripts/generate_card_index.py read by name, with their
+# place. The format file must list each one, or a rename there would silently stop a check.
+CARD_FIELDS_READ = {
+    CARD_KIND_FIELD: "frontmatter",
+    CARD_WHY: "frontmatter",
+    CARD_APPLIES: "frontmatter",
+    CARD_DATE_FIELD: "frontmatter",
+    CARD_LEARN: "section",
+    **dict.fromkeys(CARD_EVIDENCE, "section"),
+    CARD_GUARDS: "section",
+}
+# A field-table row, one line: | `name` | where | kinds | meaning |
+_FORMAT_ROW_RE = re.compile(r"\| *`([^`]+)` *\|([^|]*)\|([^|]*)\|[^|]*\| *")
+_TABLE_SEPARATOR_RE = re.compile(r"\|(?: *:?-+:? *\|)+ *")
 _TITLE_RE = re.compile(r"^# +(\S.*?) *$", re.MULTILINE)
 _BULLET_RE = re.compile(r"^[-*] ")
 _DATED_BULLET_RE = re.compile(r"^[-*] +(\d{4}-\d{2}-\d{2}):")
@@ -554,7 +568,19 @@ def load_card_format(root: Path, violations: list[Violation]) -> CardFormat | No
             "needs a '- **Index line limit:** <positive whole number>' line",
         )
     fields: list[CardField] = []
-    for match in _FORMAT_ROW_RE.finditer(_sections(text).get("fields", "")):
+    for line in _sections(text).get("fields", "").splitlines():
+        line = line.strip()
+        if not line.startswith("|") or _TABLE_SEPARATOR_RE.fullmatch(line):
+            continue
+        if line.split("|")[1].strip() == "Field":
+            continue  # the header row
+        match = _FORMAT_ROW_RE.fullmatch(line)
+        if match is None:
+            bad(
+                "table_row",
+                f"field table row '{line}' is not '| `name` | where | kinds | meaning |'",
+            )
+            continue
         name, where, spec = (g.strip() for g in match.groups())
         tokens = [t.strip() for t in spec.split(",") if t.strip()]
         if tokens in (["all"], ["optional"]):
@@ -568,14 +594,19 @@ def load_card_format(root: Path, violations: list[Violation]) -> CardFormat | No
             bad(name, f"field '{name}': Where must be frontmatter or section")
             continue
         fields.append(CardField(name, where, spec_value))
-    if not any(
-        f.name == CARD_KIND_FIELD and f.where == "frontmatter" and f.kinds == "all"
-        for f in fields
-    ):
-        bad(
-            CARD_KIND_FIELD,
-            f"the field table needs a '{CARD_KIND_FIELD}' frontmatter row for all kinds",
-        )
+    by_name = {f.name: f for f in fields}
+    for name, where in CARD_FIELDS_READ.items():
+        field = by_name.get(name)
+        if name == CARD_KIND_FIELD:
+            ok = field is not None and field.where == where and field.kinds == "all"
+            need = f"a '{name}' {where} row for all kinds"
+        else:
+            ok = field is not None and field.where == where
+            need = (
+                f"a '{name}' {where} row: the gate or the card index reads it by name"
+            )
+        if not ok:
+            bad(name, f"the field table needs {need}")
     if errors:
         violations.extend(errors)
         return None
@@ -607,10 +638,19 @@ def _card_has(field: CardField, fields: dict, sections: dict[str, str]) -> bool:
     return bool(sections.get(field.name.lower(), "").strip())
 
 
-def _is_class_doc(card_path: Path, link: str, root: Path) -> bool:
+def _relative_file(link: str) -> str | None:
+    """The file part of a relative link, its #anchor dropped; None for a web, mail or
+    same-page link."""
     if "://" in link or link.startswith(("#", "mailto:")):
+        return None
+    return link.split("#", 1)[0]
+
+
+def _is_class_doc(card_path: Path, link: str, root: Path) -> bool:
+    file = _relative_file(link)
+    if file is None:
         return False
-    target = (card_path.parent / link).resolve()
+    target = (card_path.parent / file).resolve()
     return (
         target.is_file()
         and target.suffix == ".md"
@@ -686,9 +726,10 @@ def _check_card(
                 f"has a '{CARD_GUARDS}' entry that is not a link to a doc in {CLASS_DOCS_DIR}/",
             )
     for link in _MARKDOWN_LINK_RE.findall(text):
-        if "://" in link or link.startswith(("#", "mailto:")):
+        file = _relative_file(link)
+        if file is None:
             continue
-        if not (card_path.parent / link).resolve().exists():
+        if not (card_path.parent / file).resolve().exists():
             add("card_link_unresolvable", f"links '{link}', which does not resolve")
 
 

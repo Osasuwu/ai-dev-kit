@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from structure_gate import check_tree, main
+from structure_gate import check_tree, load_card_format, main
 
 FIXTURES = Path(__file__).parent / "fixtures" / "structure_gate"
 VALID = FIXTURES / "valid"
@@ -611,6 +611,39 @@ def test_a_relative_link_in_a_card_that_resolves_to_no_file_fails(tmp_path):
     assert _violations(root) == [(CONFIG_CARD, "card_link_unresolvable")]
 
 
+def test_a_guards_link_with_an_anchor_to_a_class_doc_passes(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        CONFIG_CARD,
+        "(../docs/classes/alpha.md)",
+        "(../docs/classes/alpha.md#protections)",
+    )
+    assert _violations(root) == []
+
+
+def test_a_relative_link_with_an_anchor_to_a_file_that_exists_passes(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        CONFIG_CARD,
+        "Add each check to the branch rule.",
+        "See [the habit](run-the-app.md#check).",
+    )
+    assert _violations(root) == []
+
+
+def test_a_relative_link_with_an_anchor_to_no_file_fails(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        CONFIG_CARD,
+        "Add each check to the branch rule.",
+        "See [here](missing.md#check).",
+    )
+    assert _violations(root) == [(CONFIG_CARD, "card_link_unresolvable")]
+
+
 def test_the_card_fields_come_from_the_format_file_not_from_the_gate(tmp_path):
     root = _tree(tmp_path)
     # A row added to the format's table is a field every card of the named kind must carry...
@@ -651,6 +684,28 @@ def test_the_card_fields_come_from_the_format_file_not_from_the_gate(tmp_path):
             "| `Fix` | sidebar | config |",
             "card_format_invalid:Fix",
         ),
+        # A table row the gate cannot parse is an error, not a row it skips.
+        (
+            "| `Fix` | section | config |",
+            "| Fix | section | config |",
+            "card_format_invalid:table_row",
+        ),
+        (
+            "| `Fix` | section | config | How to fix. |",
+            "| `Fix` | section config |",
+            "card_format_invalid:table_row",
+        ),
+        # A field the code reads by name, in the wrong place.
+        (
+            "| `why` | frontmatter |",
+            "| `why` | section |",
+            "card_format_invalid:why",
+        ),
+        (
+            "| `Learn` | section |",
+            "| `Learn` | frontmatter |",
+            "card_format_invalid:Learn",
+        ),
     ],
 )
 def test_a_format_file_the_gate_cannot_read_fails_and_names_what(
@@ -659,6 +714,62 @@ def test_a_format_file_the_gate_cannot_read_fails_and_names_what(
     root = _tree(tmp_path)
     _edit(root, FORMAT, old, new)
     assert _violations(root) == [(FORMAT, code)]
+
+
+# The fields the gate's value checks and the card index generator read by name.
+FIELDS_READ_BY_NAME = [
+    "kind",
+    "why",
+    "applies_when",
+    "last_reviewed",
+    "Learn",
+    "Evidence for",
+    "Evidence against",
+    "Guards",
+]
+
+
+@pytest.mark.parametrize("name", FIELDS_READ_BY_NAME)
+def test_a_format_without_a_field_the_code_reads_by_name_fails(tmp_path, name):
+    # Renamed in the format alone, the check that reads the old name would stop checking.
+    root = _tree(tmp_path)
+    _edit(root, FORMAT, f"| `{name}` |", f"| `{name} renamed` |")
+    assert _violations(root) == [(FORMAT, f"card_format_invalid:{name}")]
+
+
+# Issue #340 AC1: the card fields and the kinds that carry them.
+AC1_FIELDS = {
+    "kind": ("frontmatter", "all"),
+    "why": ("frontmatter", "all"),
+    "applies_when": ("frontmatter", "all"),
+    "last_reviewed": ("frontmatter", "all"),
+    "Check": ("section", "all"),
+    "Fix": ("section", ("config",)),
+    "Learn": ("section", "all"),
+    "Evidence for": ("section", "all"),
+    "Evidence against": ("section", "all"),
+    "Guards": ("section", "optional"),
+}
+
+
+def test_the_shipped_card_format_keeps_the_fields_issue_340_names():
+    # Editing cards/README.md alone must not be able to make a field optional.
+    violations = []
+    fmt = load_card_format(REPO_ROOT, violations)
+    assert violations == []
+    assert fmt.kinds == ("config", "habit", "belief")
+    shipped = {f.name: (f.where, f.kinds) for f in fmt.fields}
+    assert {name: shipped.get(name) for name in AC1_FIELDS} == AC1_FIELDS
+
+
+def test_the_structure_gate_workflow_lists_the_cards_even_when_pytest_fails():
+    text = (REPO_ROOT / ".github/workflows/structure-gate.yml").read_text(
+        encoding="utf-8"
+    )
+    steps = text.split("\n      - ")
+    cli = [s for s in steps if "run: python tests/structure_gate.py\n" in s + "\n"]
+    assert len(cli) == 1
+    assert "if: ${{ !cancelled() }}" in cli[0]
 
 
 def test_a_missing_format_file_fails(tmp_path):
