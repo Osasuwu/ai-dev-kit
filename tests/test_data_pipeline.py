@@ -125,11 +125,43 @@ def test_check_data_names_a_personal_column_in_the_index(tmp_path):
     ]
 
 
-def test_check_data_refuses_a_file_without_a_schema(tmp_path):
+def test_check_data_names_an_index_row_with_extra_columns(tmp_path):
     d = clean_data_dir(tmp_path)
-    (d / "relevance.tsv").write_text("x\n", encoding="utf-8")
+    (d / "cluster-index.tsv").write_text(
+        "key\ttalks\ttitle\tidea\nA-01\t2\tt\ti\tknown\thigh\n", encoding="utf-8"
+    )
+    assert load("check_data").check(d) == ["cluster-index.tsv:2: 6 columns, expected 4"]
+
+
+def test_check_data_names_an_object_or_list_in_a_scalar_field(tmp_path):
+    d = clean_data_dir(tmp_path)
+    write_jsonl(
+        d / "claims.jsonl",
+        [{**CLAIM, "quality": {"status": "known"}, "area": ["a", "b"]}],
+    )
     assert load("check_data").check(d) == [
-        "relevance.tsv: no schema for this file; add one to check_data.py or move it out"
+        "claims.jsonl:1: field 'area' is not a single value",
+        "claims.jsonl:1: field 'quality' is not a single value",
+    ]
+
+
+def test_check_data_names_a_missing_group_key(tmp_path):
+    d = clean_data_dir(tmp_path)
+    group = json.loads((d / "clusters" / "A.json").read_text(encoding="utf-8"))
+    del group["noise"]
+    (d / "clusters" / "A.json").write_text(json.dumps(group), encoding="utf-8")
+    assert load("check_data").check(d) == ["clusters/A.json: missing field 'noise'"]
+
+
+@pytest.mark.parametrize(
+    "name", ["relevance.tsv", "talk-titles.md", "notes/x.py", "x__pycache__.jsonl"]
+)
+def test_check_data_refuses_a_file_without_a_schema(tmp_path, name):
+    d = clean_data_dir(tmp_path)
+    (d / name).parent.mkdir(parents=True, exist_ok=True)
+    (d / name).write_text("x\n", encoding="utf-8")
+    assert load("check_data").check(d) == [
+        f"{name}: no schema for this file; add one to check_data.py or move it out"
     ]
 
 
@@ -153,9 +185,11 @@ def test_check_data_names_a_personal_reference_in_text(tmp_path, text):
     assert errors[0].startswith("pipeline/step.md:3: personal reference")
 
 
-def test_check_data_scans_claim_text_for_personal_references(tmp_path):
+@pytest.mark.parametrize("text", ["as in known.md", "see C:\\Users\\someone\\notes"])
+def test_check_data_scans_claim_text_for_personal_references(tmp_path, text):
+    # JSON escapes a backslash, so the Windows path is stored as C:\\Users\\.
     d = clean_data_dir(tmp_path)
-    write_jsonl(d / "claims.jsonl", [{**CLAIM, "claim": "as in known.md"}])
+    write_jsonl(d / "claims.jsonl", [{**CLAIM, "claim": text}])
     errors = load("check_data").check(d)
     assert [e.split(" (")[0] for e in errors] == ["claims.jsonl:1: personal reference"]
 
@@ -314,6 +348,37 @@ def test_merge_writes_new_talks_with_derived_fields_only(tmp_path):
     }
 
 
+@pytest.mark.parametrize(
+    "bad_line", ["not json", json.dumps({"type": "claim", "talk": "talk:b"})]
+)
+def test_merge_writes_nothing_when_a_batch_line_is_bad(tmp_path, bad_line):
+    data = tmp_path / "data"
+    write_jsonl(data / "claims.jsonl", [CLAIM])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    before = (data / "claims.jsonl").read_bytes(), (data / "talks.jsonl").read_bytes()
+    claims_dir = tmp_path / "claims"
+    write_jsonl(
+        claims_dir / "batch-01.jsonl",
+        [batch_talk("talk:b"), batch_claim("talk:b", "New idea.")],
+    )
+    with (claims_dir / "batch-01.jsonl").open("a", encoding="utf-8") as f:
+        f.write(bad_line + "\n")
+    code = load("merge_claims").main(
+        [
+            "--claims-dir",
+            str(claims_dir),
+            "--data",
+            str(data),
+            "--areas-out",
+            str(tmp_path / "areas"),
+        ]
+    )
+    assert code == 1
+    after = (data / "claims.jsonl").read_bytes(), (data / "talks.jsonl").read_bytes()
+    assert after == before
+    assert not (tmp_path / "areas").exists()
+
+
 def test_merge_writes_area_inputs_for_new_claims_only(tmp_path):
     data = tmp_path / "data"
     write_jsonl(data / "claims.jsonl", [CLAIM])
@@ -395,6 +460,8 @@ def test_commit_guard_allows_produced_files(path):
         "data/../.github/x.yml",
         "/data/claims.jsonl",
         "docs/CHANGELOG.md",
+        # A case-insensitive checkout writes this into data/pipeline/.
+        "data/Pipeline/commit_guard.py",
     ],
 )
 def test_commit_guard_refuses_everything_else(path):
@@ -423,6 +490,42 @@ def test_commit_guard_reads_the_staged_paths_and_fails_on_one_outside(tmp_path):
         [sys.executable, str(script)], cwd=tmp_path, capture_output=True, text=True
     )
     assert run.returncode == 0, run.stderr
+
+
+def run_guard(cwd):
+    script = PIPELINE / "commit_guard.py"
+    return subprocess.run(
+        [sys.executable, str(script)], cwd=cwd, capture_output=True, text=True
+    )
+
+
+def committed_repo(tmp_path):
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "config", "user.email", "test@example.test")
+    git(tmp_path, "config", "user.name", "test")
+    (tmp_path / "data" / "pipeline").mkdir(parents=True)
+    (tmp_path / "data" / "claims.jsonl").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "data" / "pipeline" / "check.py").write_text("x = 1\n", "utf-8")
+    git(tmp_path, "add", "data")
+    git(tmp_path, "commit", "-q", "-m", "base")
+
+
+def test_commit_guard_refuses_a_staged_deletion(tmp_path):
+    committed_repo(tmp_path)
+    git(tmp_path, "rm", "-q", "data/claims.jsonl")
+    run = run_guard(tmp_path)
+    assert run.returncode == 1
+    assert "refused: data/claims.jsonl (deleted)" in run.stderr.splitlines()[0]
+
+
+def test_commit_guard_sees_the_old_path_of_a_rename(tmp_path):
+    committed_repo(tmp_path)
+    git(tmp_path, "mv", "data/pipeline/check.py", "data/check.py")
+    run = run_guard(tmp_path)
+    assert run.returncode == 1
+    assert run.stderr.splitlines()[0] == (
+        "commit guard: refused: data/pipeline/check.py (deleted)"
+    )
 
 
 def test_commit_guard_fails_when_nothing_is_staged(tmp_path):

@@ -1,7 +1,7 @@
 # The data rerun
 
 How `data/` is regenerated when new conference talks come out. The steps are agent-run
-instruction files plus four small scripts; a run is an agent session that follows this file.
+instruction files plus five small scripts; a run is an agent session that follows this file.
 Where the data comes from and how to refetch it: [`../sources.md`](../sources.md).
 
 ## The split
@@ -35,6 +35,13 @@ Everything fetched stays there; nothing fetched is committed. `<events>` is a re
 expression for the event names in scope, for example `2027`. Run from the repo root, on a new
 branch cut from `origin/main`.
 
+**Unchanged check, before every script.** The agents can write files, so before steps 2, 4,
+6, 7 and 8 run, the session checks that the pipeline is still the one on `origin/main`: both
+`git diff --quiet origin/main -- data/pipeline` and `git status --porcelain --ignored --
+data/pipeline` print nothing and exit 0 (the second catches new and ignored files, such as
+a planted module). Any output stops the run before the script runs: commit nothing and name
+the paths in the run's note.
+
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
 2. **Batch.** `python data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
@@ -43,13 +50,15 @@ branch cut from `origin/main`.
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
 4. **Merge.** `python data/pipeline/merge_claims.py --claims-dir <scratch>/claims --data data --areas-out <scratch>/areas --index <scratch>/batches/index.json`.
    Published claims keep their ids; new ones are numbered after the highest. A non-zero exit
-   (unparseable lines) stops the run.
+   (bad batch lines, named in its output) stops the run; the merge has written nothing, so the
+   step reruns cleanly once the batch is fixed.
 5. **Cluster.** The new group letter is the next one after the last `data/clusters/?.json`
    (`G` on the first rerun). Spawn `aie-worker` with the letter and `<scratch>/areas/`; it
    follows [`cluster.md`](cluster.md) and writes `data/clusters/<letter>.json`.
 6. **Index and match.** `python data/pipeline/build_index.py`, then spawn `aie-worker` with
    the letter and `<scratch>`; it follows [`match.md`](match.md) and writes
-   `<scratch>/matches.jsonl` and `<scratch>/pr-body.md`.
+   `<scratch>/matches.jsonl` and `<scratch>/match-summary.md`, which stay on this machine for
+   the maintainer.
 7. **Check.** `python data/pipeline/check_data.py`. Any problem stops the run before the
    commit.
 8. **Commit.** Follow [`commit.md`](commit.md).
@@ -60,7 +69,12 @@ clusters, and the pull request URL, or the step where it stopped and why.
 ## What this split does not stop
 
 - An agent's `Write` is not limited to a path. It could write outside `<scratch>` and `data/`,
-  for example into `.git/hooks/` or `.claude/`; the commit guard reads staged paths only.
+  for example into `.git/hooks/` or `.claude/`, which run code in the credentialed session
+  without any script step; the commit guard reads staged paths only. The unchanged check
+  covers `data/pipeline/` alone.
+- An agent's text reaches the public pull request only through the data files the scripts
+  check (`check_data.py`); the description is written from counts. A data file can still
+  carry injected text in a field, which `check_data.py` does not judge: the human review does.
 - "The session does not read outside text" is an instruction to the session, not a limit.
 - Spawned as a general-purpose agent instead of `aie-fetcher` or `aie-worker`, a step gets every
   tool the session has.

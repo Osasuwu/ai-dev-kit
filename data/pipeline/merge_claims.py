@@ -17,7 +17,11 @@ New talk records are added with the extraction step's own fields only (`gist`, `
 `pitch`, `audience`); nothing fetched from the conference site goes into the data dir.
 The area files written to --areas-out (outside the repo) hold the new claims only, one
 TSV per area, as the input of the clustering step. With --index, talks of the batch index
-with no talk record are counted, as a check that extraction covered every talk.
+with no talk record are counted: talks whose source had no text, which the next run tries
+again, plus any extraction missed.
+
+A batch line that is not JSON, or a record without its `type` and the string fields it
+needs (`talk`; a claim also `claim`), is a bad line: the merge writes nothing and exits 1.
 """
 
 from __future__ import annotations
@@ -64,9 +68,13 @@ def read_batches(claims_dir: Path) -> tuple[dict, list, list]:
             except json.JSONDecodeError:
                 bad.append(f"{p.name}:{n}")
                 continue
-            if rec.get("type") == "talk":
+            kind = rec.get("type") if isinstance(rec, dict) else None
+            needs = {"talk": ("talk",), "claim": ("talk", "claim")}.get(kind)
+            if needs is None or not all(isinstance(rec.get(k), str) for k in needs):
+                bad.append(f"{p.name}:{n}")
+            elif kind == "talk":
                 talks[rec["talk"]] = rec
-            elif rec.get("type") == "claim":
+            else:
                 claims.append(rec)
     return talks, claims, bad
 
@@ -132,20 +140,22 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     claims, talks, added, bad = merge(args.data, args.claims_dir)
+    if bad:
+        # Writing now would publish the good lines, and a rerun after the fix would then
+        # see them as published and leave them out of the clustering input.
+        print(f"bad lines {len(bad)}: {', '.join(bad)}; nothing written")
+        return 1
     args.data.mkdir(parents=True, exist_ok=True)
     write_jsonl(args.data / "claims.jsonl", claims)
     write_jsonl(args.data / "talks.jsonl", talks)
     write_areas(args.areas_out, added)
-    print(
-        f"claims {len(claims)} (added {len(added)}) | talks {len(talks)}"
-        f" | bad lines {len(bad)}"
-    )
+    print(f"claims {len(claims)} (added {len(added)}) | talks {len(talks)}")
     if args.index:
         index = json.loads(args.index.read_text(encoding="utf-8"))
         have = {t["id"] for t in talks}
         missing = [t["id"] for t in index if t["id"] not in have]
         print("talks in the batch index without a talk record:", len(missing))
-    return 1 if bad else 0
+    return 0
 
 
 if __name__ == "__main__":

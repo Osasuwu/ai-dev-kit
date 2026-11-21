@@ -15,7 +15,7 @@ sign in anywhere, submit a form or download a binary.
 3. **Read.** For each talk not already published, read its record with the MCP `fetch` tool
    (`id` = `talk:<slug>`): the summary, and the slide text when the record has it. When
    `fetch` returns nothing for a talk, keep the talk with an empty summary; the extraction
-   step gives it no claims.
+   step writes no record for it, so the next run tries it again.
 4. **Write** `<scratch>/talks.json`: a JSON array, one object per new talk, with the fields
    `slug`, `title`, `url`, `event`, `durationMs`, `speakers` (array of `{"name": ...}`),
    `topics` (array of `{"slug": ...}`, empty when unknown), `summary` and `slideText`. Write

@@ -2,12 +2,15 @@
 
 Usage: python data/pipeline/commit_guard.py   (from the repo root, after `git add`)
 
-Reads the staged paths (`git diff --cached --name-only --no-renames`, so a rename shows both
-its old and its new path) and exits 1 when any of them is outside what a rerun produces:
-`cards/`, `data/` except `data/pipeline/`, and `CHANGELOG.md`. The sources list is
-`data/sources.md`, inside `data/`. `.github/`, the pipeline's own code and instructions,
-tests, scripts and every other path are refused, as is a path with a `..` segment or a
-leading `/`. Nothing staged also exits 1.
+Reads the staged changes (`git diff --cached --name-status --no-renames`, so a rename shows
+as the deletion of its old path and the addition of its new one) and exits 1 when any path is
+outside what a rerun produces: `cards/`, `data/` except `data/pipeline/`, and `CHANGELOG.md`.
+The sources list is `data/sources.md`, inside `data/`. `.github/`, the pipeline's own code and
+instructions, tests, scripts and every other path are refused, as is a path with a `..`
+segment or a leading `/`. Paths are compared case-folded, because on a case-insensitive
+checkout `data/Pipeline/` is `data/pipeline/`. A staged deletion is refused anywhere: a rerun
+only adds and changes files, and claims are never deleted (`data/sources.md`). Nothing staged
+also exits 1.
 
 This is a check the step runs before it commits, not a permission: an agent that skips it
 is stopped only by the human who reviews the pull request.
@@ -21,41 +24,48 @@ import sys
 ALLOWED_PREFIXES = ("cards/", "data/")
 REFUSED_PREFIXES = ("data/pipeline/",)
 ALLOWED_FILES = ("CHANGELOG.md",)
+ALLOWED_FILES_FOLDED = tuple(f.casefold() for f in ALLOWED_FILES)
 
 
 def allowed(path: str) -> bool:
-    if path.startswith("/") or ".." in path.split("/"):
+    folded = path.casefold()
+    if folded.startswith("/") or ".." in folded.split("/"):
         return False
-    if path.startswith(REFUSED_PREFIXES):
+    if folded.startswith(REFUSED_PREFIXES):
         return False
-    return path in ALLOWED_FILES or path.startswith(ALLOWED_PREFIXES)
+    return folded in ALLOWED_FILES_FOLDED or folded.startswith(ALLOWED_PREFIXES)
 
 
 def refused(paths: list[str]) -> list[str]:
     return [p for p in paths if not allowed(p)]
 
 
-def staged() -> list[str]:
+def staged() -> list[tuple[str, str]]:
+    """Return (status letter, path) for each staged change."""
     out = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--no-renames", "-z"],
+        ["git", "diff", "--cached", "--name-status", "--no-renames", "-z"],
         capture_output=True,
         check=True,
     ).stdout.decode("utf-8")
-    return [p for p in out.split("\0") if p]
+    fields = out.split("\0")
+    return [(fields[i][:1], fields[i + 1]) for i in range(0, len(fields) - 1, 2)]
 
 
 def main() -> int:
-    paths = staged()
+    changes = staged()
+    paths = [p for _, p in changes]
     if not paths:
         print("commit guard: nothing staged", file=sys.stderr)
         return 1
-    bad = refused(paths)
-    for p in bad:
-        print(f"commit guard: refused: {p}", file=sys.stderr)
+    bad = [(p, "deleted") for s, p in changes if s == "D"]
+    bad += [(p, "outside") for p in refused(paths) if (p, "deleted") not in bad]
+    for p, why in bad:
+        print(f"commit guard: refused: {p} ({why})", file=sys.stderr)
     if bad:
         print(
-            f"commit guard: {len(bad)} of {len(paths)} staged path(s) are outside"
-            " cards/, data/ (not data/pipeline/) and CHANGELOG.md; unstage them",
+            f"commit guard: {len(bad)} of {len(paths)} staged path(s) refused: a rerun"
+            " only adds or changes files under cards/, data/ (not data/pipeline/) and"
+            " CHANGELOG.md; unstage them",
             file=sys.stderr,
         )
         return 1
