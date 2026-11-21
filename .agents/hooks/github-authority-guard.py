@@ -23,8 +23,8 @@ writes take one of the three authorities.
 
 This is a hold, not proof. A determined bypass (an alias, a script file, a
 shell reading a pipe, another interpreter's own syntax such as `python -c` or
-the body of `python <<EOF`) is not parsed. `.github/workflows/authority-detector.yml` is the other
-half: it reports every label removal and protection change after the fact.
+the body of `python <<EOF`) is not parsed. Nothing reports a label removal or
+protection change after the fact since the authority detector was removed.
 
 Reads the PreToolUse payload from stdin. Exits 2 with a deny decision to block.
 

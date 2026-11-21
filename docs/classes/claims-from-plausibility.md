@@ -135,7 +135,7 @@ Cheapest first. The first rungs ask the agent to check; the middle ones give it 
 
 ### Review: check quoted text against its source mechanically
 
-- **Source:** one operator's practice: this repo's [quote check](../../scripts/check_quotes.py) fetches the pages a doc links and checks that each quoted passage is in one of them, on every pull request that changes a markdown file ([`quote-check.yml`](../../.github/workflows/quote-check.yml)) and weekly over every doc ([`quote-cron.yml`](../../.github/workflows/quote-cron.yml)).
+- **Source:** one operator's practice, until 2026-11-22: this repo's [quote check](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/scripts/check_quotes.py) fetches the pages a doc links and checks that each quoted passage is in one of them, on every pull request that changes a markdown file ([`quote-check.yml`](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/.github/workflows/quote-check.yml)) and weekly over every doc ([`quote-cron.yml`](https://github.com/Osasuwu/ai-dev-failure-classes/blob/3d983bbf87ed0030f0a4aa9b261b4342203c9a54/.github/workflows/quote-cron.yml)).
 - **Cost:** CI minutes and page fetches on every run.
 - **Breaks when:** The page cannot be fetched (a bot check, a page rendered by script), which is reported but does not fail the run. It checks wording, not whether the claim around a quote matches the source, and a paraphrase gives it nothing to check.
 

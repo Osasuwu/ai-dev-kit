@@ -190,14 +190,9 @@ PR for review, on the doc and on the files it links to:
 
 1. **The gate.** `pytest tests/test_structure_gate.py` runs the fixtures; run the gate on the
    tree itself as the structure-gate workflow does. A failure names the rule and the file.
-2. **Quotes.** Run `python scripts/check_quotes.py <doc> <each of those files>`. For each quote it
-   fetches the pages linked from the quote's paragraph, or from the paragraph right before it if
-   that one has none, and says whether the quoted text is there. Fix every `NOT FOUND`: the
-   wording is off, or the link points at a page that does not have the text (link the page that
-   does). Check every `found elsewhere`, `unfetchable` and `no source` by hand. CI runs the same
-   check on every markdown file a PR changes
-   ([`quote-check.yml`](../../../.github/workflows/quote-check.yml)) and fails on `NOT FOUND`
-   only.
+2. **Quotes.** Open the page each quote links to and find the quoted text there. If the wording
+   is off, fix it; if the page does not have the text, link the page that does. No script or CI
+   check does this; `python scripts/check_links.py <doc>` only tells you each link resolves.
 3. **Scope words.** A claim that says *always*, *never*, *only*, *every*, *all* or *everywhere*
    needs a source that says the same. If the source says less, narrow the claim.
 4. **Each fact in one version.** For every claim you wrote or changed, search the doc and the
@@ -217,6 +212,5 @@ A fix is new text, and new text is unreviewed. For each finding:
 ## Before a person merges
 
 Have the PR reviewed in a context that did not write the doc, and fix or answer what it finds
-until a round finds nothing new. You wrote the doc, so you do not review it. A pull request that
-touches `docs/classes/` or `incidents/` is held with `waiting-human-review`; do not remove the
-label. The maintainer does.
+until a round finds nothing new. You wrote the doc, so you do not review it. The maintainer merges
+by hand; do not merge.

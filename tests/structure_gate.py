@@ -3,8 +3,8 @@
 Checks the class docs and the incident dataset in a tree. Three inputs are read from the scanned
 root, never hard-coded here:
 
-- `.github/hold-paths.json` — the one path definition (ADR-0004 decision 4). The
-  `waiting-human-review` workflow reads the same file, and a test fails if the two disagree.
+- `.github/hold-paths.json` — the one path definition (ADR-0004 decision 4). The link
+  check reads the same file.
 - `docs/vocabularies.json` — the stage, evidence-strength and surfaces-at vocabularies.
 - `DOC_SIZE_CAP_BYTES` — the one configured size cap.
 
