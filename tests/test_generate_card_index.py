@@ -87,6 +87,20 @@ def test_every_index_line_that_names_classes_carries_the_caveat(tmp_path):
     assert "one operator" not in lines[2]
 
 
+def test_kinds_run_in_the_order_the_format_lists_them(tmp_path):
+    root = _tree(tmp_path)
+    _edit(
+        root,
+        FORMAT,
+        "- **Kinds:** config, habit, belief",
+        "- **Kinds:** belief, habit, config",
+    )
+    kinds = [
+        x.split(" · ")[0] for x in render_index(root).splitlines() if x.startswith("- ")
+    ]
+    assert kinds == ["- belief", "- habit", "- config"]
+
+
 def test_cards_of_one_kind_are_ordered_by_path(tmp_path):
     root = _tree(tmp_path)
     text = (root / CONFIG_CARD).read_bytes().decode("utf-8")
