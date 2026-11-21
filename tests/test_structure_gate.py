@@ -538,7 +538,7 @@ def test_a_kind_outside_the_format_fails(tmp_path):
     assert _violations(root) == [(BELIEF_CARD, "card_kind_unknown")]
 
 
-@pytest.mark.parametrize("value", ["2026-13-01", "2026-02-30", "last week", "2026-11"])
+@pytest.mark.parametrize("value", ["2026-13-01", "2026-02-30", "last week", "2026-11", "20261101"])
 def test_a_last_reviewed_that_is_not_a_real_date_fails(tmp_path, value):
     root = _tree(tmp_path)
     _edit(root, CONFIG_CARD, "last_reviewed: 2026-11-01", f"last_reviewed: {value}")
