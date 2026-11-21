@@ -55,6 +55,12 @@ date, `Learn` has a link, every evidence bullet opens with a date, every `Guards
 class doc, and every relative link resolves to a file. The link check (`link-check`) reports a
 web link in a changed card that is dead.
 
+The gate and the index generator read some fields by name: `kind`, `why`, `applies_when`,
+`last_reviewed`, `Learn`, both evidence sections and `Guards`. A table that drops one of them,
+moves it to the other place, or has a row the gate cannot parse fails the gate. A test
+(`tests/test_structure_gate.py`) also pins the fields above at their kinds, so making a field
+optional or dropping a kind takes a change to that test as well as to this table.
+
 The date on an evidence bullet is the day the entry was written or last checked against its
 source, not the day the source was published.
 
@@ -75,4 +81,5 @@ classes comes mostly from the maintainer's own repositories (see the class map i
   Keep one file, carry both evidence lists into it with their dates, delete the other, and
   regenerate.
 - **Index full.** When a new card would push `INDEX.md` over the line limit, merge or retire
-  before adding. The limit is raised only by editing it above, in its own pull request.
+  before adding. The limit is raised only by editing it above, in its own pull request. No
+  check enforces that; the reviewer of the pull request does.

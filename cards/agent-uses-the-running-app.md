@@ -24,7 +24,7 @@ even when told to.
 
 ## Evidence for
 
-- 2026-11-22: several talks at AI Engineer events describe agents that reported features done on unit tests while the app was broken, and the fix of giving the agent the app or a browser to drive. These are cases and practitioners' experience; none gives a controlled measurement.
+- 2026-11-22: the talk [Your agent is blindfolded](https://www.youtube.com/watch?v=iRcX54EO5g8&t=132) (AI Engineer) argues that what separates an agent whose changes work from one that "writes garbage" is whether it gets feedback from the running result, not the age of the codebase. It is a practitioner's argument from experience, not a controlled measurement.
 - 2026-11-22: the incidents behind [done is not the effect](../docs/classes/done-is-not-the-effect.md) include changes that passed their tests and did nothing where the effect should land.
 - 2026-11-22: Anthropic's write-up on harnesses for long-running agents reports that its agent tended to mark features complete without testing them end to end, and built the harness around stopping that ([Anthropic](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)).
 
