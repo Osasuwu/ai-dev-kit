@@ -512,12 +512,12 @@ Quote check: Quote check base-eval-methodology-2026-11-10.md: 124 quoted claim(s
 
 | Recommendation | State | Where |
 |---|---|---|
-| Recalibrate the decision rule; it is a heuristic, and at n=3 it says "helps" too easily | deferred | Osasuwu/ai-dev-failure-classes#333 — decided in the protocol after the design's Phase 3 critic |
-| Block or audit arm B's access to the base | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Blind the merged list against content, not only labels | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Check that blinding held | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Pair the count with precision and cost | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Counterbalance the order, or state why not | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Name one-run noise as a limit, and record what can be recorded | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Record length and link count per finding | deferred | Osasuwu/ai-dev-failure-classes#333 |
-| Write the pre-registration items into the protocol before any run | deferred | Osasuwu/ai-dev-failure-classes#333 |
+| Recalibrate the decision rule; it is a heuristic, and at n=3 it says "helps" too easily | deferred | Osasuwu/ai-dev-kit#333 — decided in the protocol after the design's Phase 3 critic |
+| Block or audit arm B's access to the base | deferred | Osasuwu/ai-dev-kit#333 |
+| Blind the merged list against content, not only labels | deferred | Osasuwu/ai-dev-kit#333 |
+| Check that blinding held | deferred | Osasuwu/ai-dev-kit#333 |
+| Pair the count with precision and cost | deferred | Osasuwu/ai-dev-kit#333 |
+| Counterbalance the order, or state why not | deferred | Osasuwu/ai-dev-kit#333 |
+| Name one-run noise as a limit, and record what can be recorded | deferred | Osasuwu/ai-dev-kit#333 |
+| Record length and link count per finding | deferred | Osasuwu/ai-dev-kit#333 |
+| Write the pre-registration items into the protocol before any run | deferred | Osasuwu/ai-dev-kit#333 |
