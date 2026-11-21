@@ -1,0 +1,462 @@
+"""Tests for the data pipeline under data/pipeline/ (#341).
+
+The published data carries only its allowed fields (check_data), the batching tool takes the
+event filter from its caller instead of a hardcoded year (batches), claim ids survive a rerun
+(merge_claims), the cluster index is generated from the published files (build_index), the
+credentialed step commits only produced files (commit_guard), and the agents that read
+outside pages have no shell or GitHub tool (agents/*.md).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).parent.parent
+DATA = ROOT / "data"
+PIPELINE = DATA / "pipeline"
+
+
+def load(name):
+    spec = importlib.util.spec_from_file_location(name, PIPELINE / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def write_jsonl(path, records):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records),
+        encoding="utf-8",
+    )
+
+
+def read_jsonl(path):
+    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x]
+
+
+CLAIM = {
+    "cid": "c0001",
+    "talk": "talk:a",
+    "claim": "Keep tasks small.",
+    "kind": "technique",
+    "evidence": "anecdote",
+    "depth": 3,
+    "area": "coding-agents",
+    "search": "small tasks",
+    "quality": 4,
+    "pitch": False,
+}
+TALK = {"id": "talk:a", "gist": "About small tasks.", "quality": 4, "pitch": False}
+TALK["audience"] = "builder"
+
+
+def clean_data_dir(tmp_path):
+    d = tmp_path / "data"
+    write_jsonl(d / "claims.jsonl", [CLAIM])
+    write_jsonl(d / "talks.jsonl", [TALK])
+    cluster = {
+        "key": "A-01",
+        "title": "t",
+        "idea": "i",
+        "contested": False,
+        "cids": ["c0001"],
+    }
+    group = {"clusters": [cluster], "singletons": [], "noise": []}
+    (d / "clusters").mkdir()
+    (d / "clusters" / "A.json").write_text(json.dumps(group), encoding="utf-8")
+    merged = {"key": "M-01", "title": "t", "idea": "i", "contested": False}
+    merged["from"] = ["A-01"]
+    (d / "merge-map.json").write_text(json.dumps({"merged": [merged]}), "utf-8")
+    (d / "cluster-index.tsv").write_text("key\ttalks\ttitle\tidea\n", "utf-8")
+    (d / "README.md").write_text("# Data\n", encoding="utf-8")
+    return d
+
+
+# --- check_data: the published files carry only their allowed fields ------------------
+
+
+def test_check_data_passes_on_the_published_data():
+    assert load("check_data").check(DATA) == []
+
+
+def test_check_data_passes_on_a_clean_fixture(tmp_path):
+    assert load("check_data").check(clean_data_dir(tmp_path)) == []
+
+
+def test_check_data_names_a_personal_field_in_a_cluster(tmp_path):
+    d = clean_data_dir(tmp_path)
+    group = json.loads((d / "clusters" / "A.json").read_text(encoding="utf-8"))
+    group["clusters"][0]["status"] = "known"
+    (d / "clusters" / "A.json").write_text(json.dumps(group), encoding="utf-8")
+    assert load("check_data").check(d) == [
+        "clusters/A.json: cluster A-01: unexpected field 'status'"
+    ]
+
+
+def test_check_data_names_fetched_metadata_in_a_talk_record(tmp_path):
+    d = clean_data_dir(tmp_path)
+    write_jsonl(d / "talks.jsonl", [{**TALK, "speakers": ["Someone"]}])
+    assert load("check_data").check(d) == ["talks.jsonl:1: unexpected field 'speakers'"]
+
+
+def test_check_data_names_a_missing_claim_field(tmp_path):
+    d = clean_data_dir(tmp_path)
+    write_jsonl(d / "claims.jsonl", [{k: v for k, v in CLAIM.items() if k != "cid"}])
+    assert load("check_data").check(d) == ["claims.jsonl:1: missing field 'cid'"]
+
+
+def test_check_data_names_a_personal_column_in_the_index(tmp_path):
+    d = clean_data_dir(tmp_path)
+    # The maintainer's own index carries its personal columns after the public ones.
+    (d / "cluster-index.tsv").write_text(
+        "key\ttalks\ttitle\tidea\tstatus\trelevance\n", encoding="utf-8"
+    )
+    assert load("check_data").check(d) == [
+        "cluster-index.tsv: header is"
+        " ['key', 'talks', 'title', 'idea', 'status', 'relevance'],"
+        " expected ['key', 'talks', 'title', 'idea']"
+    ]
+
+
+def test_check_data_refuses_a_file_without_a_schema(tmp_path):
+    d = clean_data_dir(tmp_path)
+    (d / "relevance.tsv").write_text("x\n", encoding="utf-8")
+    assert load("check_data").check(d) == [
+        "relevance.tsv: no schema for this file; add one to check_data.py or move it out"
+    ]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "see C:\\Users\\someone\\notes",
+        "see /home/someone/notes",
+        "see /Users/someone/notes",
+        "read the backlog.md first",
+        "compare with known.md",
+        "under briefings/aie",
+    ],
+)
+def test_check_data_names_a_personal_reference_in_text(tmp_path, text):
+    d = clean_data_dir(tmp_path)
+    (d / "pipeline").mkdir()
+    (d / "pipeline" / "step.md").write_text(f"# Step\n\n{text}\n", encoding="utf-8")
+    errors = load("check_data").check(d)
+    assert len(errors) == 1
+    assert errors[0].startswith("pipeline/step.md:3: personal reference")
+
+
+def test_check_data_scans_claim_text_for_personal_references(tmp_path):
+    d = clean_data_dir(tmp_path)
+    write_jsonl(d / "claims.jsonl", [{**CLAIM, "claim": "as in known.md"}])
+    errors = load("check_data").check(d)
+    assert [e.split(" (")[0] for e in errors] == ["claims.jsonl:1: personal reference"]
+
+
+# --- batches: the event filter comes from the caller ---------------------------------
+
+
+def talk_row(slug, event):
+    return {
+        "slug": slug,
+        "title": slug.upper(),
+        "url": f"https://example.test/{slug}",
+        "event": event,
+        "durationMs": "600000",
+        "speakers": "[]",
+        "topics": "[]",
+        "summary": "s",
+        "slideText": "t",
+    }
+
+
+def run_batches(tmp_path, rows, *extra):
+    src = tmp_path / "talks.json"
+    src.write_text(json.dumps(rows), encoding="utf-8")
+    out = tmp_path / "batches"
+    load("batches").main([str(src), str(out), "10", *extra])
+    return [t["id"] for t in json.loads((out / "batch-01.json").read_text("utf-8"))]
+
+
+def test_batches_picks_the_events_the_caller_names(tmp_path):
+    rows = [
+        talk_row("old", "AI Engineer Europe 2026"),
+        talk_row("new", "AI Engineer Europe 2027"),
+        talk_row("loose", ""),
+    ]
+    picked = run_batches(tmp_path, rows, "--event-pattern", "2027")
+    assert picked == ["talk:new", "talk:loose"]
+
+
+def test_batches_requires_an_event_pattern(tmp_path):
+    with pytest.raises(SystemExit):
+        run_batches(tmp_path, [talk_row("a", "x")])
+
+
+def test_batches_skips_talks_already_published(tmp_path):
+    known = tmp_path / "known-talks.jsonl"
+    write_jsonl(known, [{**TALK, "id": "talk:seen"}])
+    rows = [talk_row("seen", "E 2027"), talk_row("fresh", "E 2027")]
+    picked = run_batches(
+        tmp_path, rows, "--event-pattern", "2027", "--known", str(known)
+    )
+    assert picked == ["talk:fresh"]
+
+
+# --- merge_claims: claim ids survive a rerun ------------------------------------------
+
+
+def batch_claim(talk, text):
+    return {
+        "type": "claim",
+        "talk": talk,
+        "claim": text,
+        "kind": "finding",
+        "evidence": "measured",
+        "depth": 2,
+        "area": "evals",
+        "search": "x y z",
+    }
+
+
+def batch_talk(talk):
+    return {
+        "type": "talk",
+        "talk": talk,
+        "gist": f"gist of {talk}",
+        "quality": 3,
+        "pitch": True,
+        "audience": "leader",
+    }
+
+
+def run_merge(tmp_path, data, batch_records):
+    claims_dir = tmp_path / "claims"
+    write_jsonl(claims_dir / "batch-01.jsonl", batch_records)
+    areas = tmp_path / "areas"
+    load("merge_claims").main(
+        [
+            "--claims-dir",
+            str(claims_dir),
+            "--data",
+            str(data),
+            "--areas-out",
+            str(areas),
+        ]
+    )
+    return read_jsonl(data / "claims.jsonl"), read_jsonl(data / "talks.jsonl")
+
+
+def test_merge_keeps_existing_ids_and_numbers_new_claims_after_the_highest(tmp_path):
+    data = tmp_path / "data"
+    second = {**CLAIM, "cid": "c0007", "claim": "Review every diff."}
+    write_jsonl(data / "claims.jsonl", [CLAIM, second])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    claims, _ = run_merge(
+        tmp_path,
+        data,
+        [
+            batch_talk("talk:b"),
+            batch_claim("talk:b", "New idea."),
+            batch_claim("talk:a", "  keep TASKS small. "),
+        ],
+    )
+    assert [(c["cid"], c["claim"]) for c in claims] == [
+        ("c0001", "Keep tasks small."),
+        ("c0007", "Review every diff."),
+        ("c0008", "New idea."),
+    ]
+
+
+def test_merge_is_idempotent(tmp_path):
+    data = tmp_path / "data"
+    write_jsonl(data / "claims.jsonl", [CLAIM])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    records = [batch_talk("talk:b"), batch_claim("talk:b", "New idea.")]
+    first = run_merge(tmp_path, data, records)
+    second = run_merge(tmp_path, data, records)
+    assert first == second
+    assert [c["cid"] for c in second[0]] == ["c0001", "c0002"]
+
+
+def test_merge_writes_new_talks_with_derived_fields_only(tmp_path):
+    data = tmp_path / "data"
+    write_jsonl(data / "claims.jsonl", [CLAIM])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    claims, talks = run_merge(
+        tmp_path, data, [batch_talk("talk:b"), batch_claim("talk:b", "New idea.")]
+    )
+    assert talks[1] == {
+        "id": "talk:b",
+        "gist": "gist of talk:b",
+        "quality": 3,
+        "pitch": True,
+        "audience": "leader",
+    }
+    assert claims[1] == {
+        "cid": "c0002",
+        "talk": "talk:b",
+        "claim": "New idea.",
+        "kind": "finding",
+        "evidence": "measured",
+        "depth": 2,
+        "area": "evals",
+        "search": "x y z",
+        "quality": 3,
+        "pitch": True,
+    }
+
+
+def test_merge_writes_area_inputs_for_new_claims_only(tmp_path):
+    data = tmp_path / "data"
+    write_jsonl(data / "claims.jsonl", [CLAIM])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    run_merge(
+        tmp_path,
+        data,
+        [batch_talk("talk:b"), batch_claim("talk:b", "New idea.")],
+    )
+    assert sorted(p.name for p in (tmp_path / "areas").iterdir()) == ["evals.tsv"]
+    assert (tmp_path / "areas" / "evals.tsv").read_text("utf-8") == (
+        "c0002\tq3\tmeasured\td2\tNew idea.\n"
+    )
+
+
+# --- build_index: the cluster index is generated from the published files ------------
+
+
+def test_build_index_joins_merged_groups_and_drops_single_talk_clusters(tmp_path):
+    d = tmp_path / "data"
+    claims = [
+        {**CLAIM, "cid": "c0001", "talk": "talk:a"},
+        {**CLAIM, "cid": "c0002", "talk": "talk:b"},
+        {**CLAIM, "cid": "c0003", "talk": "talk:c"},
+        {**CLAIM, "cid": "c0004", "talk": "talk:c"},
+    ]
+    write_jsonl(d / "claims.jsonl", claims)
+    (d / "clusters").mkdir()
+
+    def cl(key, cids):
+        return {"key": key, "title": key, "idea": "", "contested": False, "cids": cids}
+
+    group_a = {"clusters": [cl("A-01", ["c0001"]), cl("A-02", ["c0003", "c0004"])]}
+    group_b = {"clusters": [cl("B-01", ["c0002"])]}
+    (d / "clusters" / "A.json").write_text(json.dumps(group_a), encoding="utf-8")
+    (d / "clusters" / "B.json").write_text(json.dumps(group_b), encoding="utf-8")
+    merged = {"key": "M-01", "title": "joined", "idea": "both\tsides", "from": []}
+    merged["from"] = ["A-01", "B-01"]
+    (d / "merge-map.json").write_text(json.dumps({"merged": [merged]}), "utf-8")
+    load("build_index").main([str(d)])
+    assert (d / "cluster-index.tsv").read_text(encoding="utf-8") == (
+        "key\ttalks\ttitle\tidea\nM-01\t2\tjoined\tboth sides\n"
+    )
+
+
+def test_build_index_is_not_stale_against_the_published_data(tmp_path):
+    published = (DATA / "cluster-index.tsv").read_text(encoding="utf-8")
+    copy = tmp_path / "data"
+    (copy / "clusters").mkdir(parents=True)
+    for name in ("claims.jsonl", "merge-map.json"):
+        (copy / name).write_bytes((DATA / name).read_bytes())
+    for p in (DATA / "clusters").glob("*.json"):
+        (copy / "clusters" / p.name).write_bytes(p.read_bytes())
+    load("build_index").main([str(copy)])
+    assert (copy / "cluster-index.tsv").read_text(encoding="utf-8") == published
+
+
+# --- commit_guard: the credentialed step commits only produced files -----------------
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["data/claims.jsonl", "data/clusters/G.json", "cards/some-card.md", "CHANGELOG.md"],
+)
+def test_commit_guard_allows_produced_files(path):
+    assert load("commit_guard").refused([path]) == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".github/workflows/tests.yml",
+        ".github/hold-paths.json",
+        "data/pipeline/commit_guard.py",
+        "data/pipeline/agents/aie-fetcher.md",
+        "scripts/check_links.py",
+        "tests/test_data_pipeline.py",
+        "README.md",
+        "data/../.github/x.yml",
+        "/data/claims.jsonl",
+        "docs/CHANGELOG.md",
+    ],
+)
+def test_commit_guard_refuses_everything_else(path):
+    assert load("commit_guard").refused([path]) == [path]
+
+
+def git(cwd, *args):
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
+def test_commit_guard_reads_the_staged_paths_and_fails_on_one_outside(tmp_path):
+    git(tmp_path, "init", "-q")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "claims.jsonl").write_text("{}\n", encoding="utf-8")
+    (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "x.yml").write_text("x\n", encoding="utf-8")
+    git(tmp_path, "add", "data/claims.jsonl", ".github/x.yml")
+    script = PIPELINE / "commit_guard.py"
+    run = subprocess.run(
+        [sys.executable, str(script)], cwd=tmp_path, capture_output=True, text=True
+    )
+    assert run.returncode == 1
+    assert "refused: .github/x.yml" in run.stderr
+    git(tmp_path, "rm", "-q", "--cached", ".github/x.yml")
+    run = subprocess.run(
+        [sys.executable, str(script)], cwd=tmp_path, capture_output=True, text=True
+    )
+    assert run.returncode == 0, run.stderr
+
+
+def test_commit_guard_fails_when_nothing_is_staged(tmp_path):
+    git(tmp_path, "init", "-q")
+    script = PIPELINE / "commit_guard.py"
+    run = subprocess.run(
+        [sys.executable, str(script)], cwd=tmp_path, capture_output=True, text=True
+    )
+    assert run.returncode == 1
+    assert "nothing staged" in run.stderr
+
+
+# --- agents: the steps that read outside text have no shell or GitHub tool -----------
+
+
+def agent_tools(name):
+    text = (PIPELINE / "agents" / f"{name}.md").read_text(encoding="utf-8")
+    front = text.split("---\n")[1]
+    line = next(x for x in front.splitlines() if x.startswith("tools:"))
+    return [t.strip() for t in line.removeprefix("tools:").split(",")]
+
+
+def test_the_fetcher_agent_has_network_read_and_file_tools_only():
+    assert agent_tools("aie-fetcher") == [
+        "Read",
+        "Write",
+        "Glob",
+        "WebFetch",
+        "mcp__ai-engineer__list_conferences",
+        "mcp__ai-engineer__get_schedule",
+        "mcp__ai-engineer__search",
+        "mcp__ai-engineer__fetch",
+    ]
+
+
+def test_the_worker_agent_has_file_tools_only():
+    assert agent_tools("aie-worker") == ["Read", "Write", "Glob", "Grep"]

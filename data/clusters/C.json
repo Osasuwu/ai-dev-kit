@@ -1,0 +1,919 @@
+{
+ "clusters": [
+  {
+   "key": "C-01",
+   "title": "Faster code generation moves the bottleneck downstream to review and delivery",
+   "idea": "Agents multiply code output, but shipping speed barely moves because review, comprehension, triage and release become the constraint (theory of constraints). Talks differ on whether the binding constraint is human attention, review capacity, or the merge/release pipeline.",
+   "contested": false,
+   "cids": [
+    "c0022",
+    "c1140",
+    "c1277",
+    "c1572",
+    "c1531",
+    "c1947",
+    "c2039",
+    "c1748",
+    "c1836"
+   ]
+  },
+  {
+   "key": "C-02",
+   "title": "AI gains come from redesigning the end-to-end workflow, not speeding the build step",
+   "idea": "Accelerating only implementation leaves decisions, approvals and handoffs as the outer-loop bottleneck; high performers redesign the whole lifecycle and roles. Some propose war rooms or agent-coordinated spec-to-PR pipelines, others frame it as survey/McKinsey evidence.",
+   "contested": false,
+   "cids": [
+    "c1584",
+    "c1130",
+    "c1730",
+    "c1941",
+    "c0084"
+   ]
+  },
+  {
+   "key": "C-03",
+   "title": "When building is cheap, deciding what to build is the scarce skill",
+   "idea": "Implementation cost collapses, so judgment about which problems matter, restraint against feature overload and taste become the expensive inputs. Talks differ on whether the scarce thing is product judgment, oversight taste, or simply having and capturing ideas.",
+   "contested": false,
+   "cids": [
+    "c0769",
+    "c1367",
+    "c0737",
+    "c1940",
+    "c1760",
+    "c0278",
+    "c1951",
+    "c0474"
+   ]
+  },
+  {
+   "key": "C-04",
+   "title": "The durable engineer role becomes product engineer and agent coordinator",
+   "idea": "Developers shift from writing lines to understanding customers, specifying what good means and coordinating agents; engineering is redefined rather than removed. Talks differ on how much stays technical (science, design) versus customer-facing.",
+   "contested": false,
+   "cids": [
+    "c0375",
+    "c1574",
+    "c1893",
+    "c0780",
+    "c1431",
+    "c0294"
+   ]
+  },
+  {
+   "key": "C-05",
+   "title": "Agents delegating implementation breaks the junior training path",
+   "idea": "If juniors no longer do implementation tickets they lose the reps that build judgment, so leaders must deliberately teach discovery, spec writing and product judgment, and juniors must seek feedback on purpose.",
+   "contested": false,
+   "cids": [
+    "c1575",
+    "c1122"
+   ]
+  },
+  {
+   "key": "C-06",
+   "title": "Agents prepare and draft; humans keep the accountable decision and sign-off",
+   "idea": "A division of labour where agents gather, monitor, research and draft while a named human reviews and owns the final call or client contact. Talks vary in domain (finance, wealth planning, marketing, intake) and in how strongly they warn about cognitive surrender.",
+   "contested": false,
+   "cids": [
+    "c0766",
+    "c1092",
+    "c1618",
+    "c2113",
+    "c1197",
+    "c1623",
+    "c0413",
+    "c1091",
+    "c0426"
+   ]
+  },
+  {
+   "key": "C-07",
+   "title": "Invest in verification infrastructure before scaling agent autonomy",
+   "idea": "Tests, CI, guardrails and observability are what make agent output trustworthy; control comes from checks in the repo rather than line-by-line review. Talks differ on whether this needs a dedicated role (AIX) and on extending coding-style infrastructure to knowledge work.",
+   "contested": false,
+   "cids": [
+    "c1440",
+    "c0407",
+    "c0213",
+    "c0341",
+    "c1013",
+    "c2010",
+    "c1718",
+    "c0321"
+   ]
+  },
+  {
+   "key": "C-08",
+   "title": "Gates must demand explicit evidence and audit records, not polished-looking output",
+   "idea": "Polished artifacts fool naive reviewers, so pipelines need blocking gates whose evidence is recorded and tied to the exact change; 'done' splits into separate claims (merged, deployed, announced) with different evidence and owners.",
+   "contested": false,
+   "cids": [
+    "c0324",
+    "c0916",
+    "c1852"
+   ]
+  },
+  {
+   "key": "C-09",
+   "title": "Codify team standards and agent lessons into one shared harness",
+   "idea": "What works for one engineer breaks at team scale; consolidate conventions, ADR-like context and recurring-failure fixes into a shared harness or governance layer so every agent improves, then automate approval as intervention falls. Talks differ on how much stays human-approved.",
+   "contested": false,
+   "cids": [
+    "c0116",
+    "c0787",
+    "c1310",
+    "c1363",
+    "c1751",
+    "c1216"
+   ]
+  },
+  {
+   "key": "C-10",
+   "title": "Agent speed makes team alignment the bottleneck; anchor it in durable decision docs",
+   "idea": "Faster individual output snowballs small misalignments into wasted work and pushes alignment into PR review; the fix is shared, durable planning artifacts (decision docs, ADRs, design-doc handoffs) rather than ephemeral chats.",
+   "contested": false,
+   "cids": [
+    "c0598",
+    "c0547",
+    "c0877",
+    "c0878",
+    "c0131",
+    "c0613"
+   ]
+  },
+  {
+   "key": "C-11",
+   "title": "Cheap generation amplifies entropy; protect review with small, owned, legible changes",
+   "idea": "Slop looks finished before the thinking is done and inflates PR size and failure volatility; keep changes small and dependency-ordered, ownership explicit and human-written text distinguishable so reviewers can do their job.",
+   "contested": false,
+   "cids": [
+    "c1508",
+    "c1509",
+    "c0615",
+    "c2038",
+    "c0264",
+    "c1442"
+   ]
+  },
+  {
+   "key": "C-12",
+   "title": "Measure AI engineering by trusted outcomes, not tokens or PR volume",
+   "idea": "Token spend, usage leaderboards and PR counts are gameable and mislead; measure validated throughput, customer delivery and quality. One talk instead sets merged changes per employee as an explicit 2x target, so the cluster is contested.",
+   "contested": true,
+   "cids": [
+    "c0628",
+    "c1404",
+    "c1448",
+    "c0419",
+    "c1478",
+    "c0414",
+    "c2040",
+    "c0696",
+    "c1300",
+    "c0697"
+   ]
+  },
+  {
+   "key": "C-13",
+   "title": "Track human intervention rate as the core software-factory metric",
+   "idea": "Count manual takeovers, human PR comments, interventions and time to repair rather than generated volume; separate autonomy (fewer corrections) from automation (less manual verification).",
+   "contested": false,
+   "cids": [
+    "c1142",
+    "c1311",
+    "c1542",
+    "c1540"
+   ]
+  },
+  {
+   "key": "C-14",
+   "title": "Measure fully loaded cost per accepted unit of work, human plus AI",
+   "idea": "Judge automation by cost per merged PR or accepted task including review, escalation, rework and salaries, and only count freed capacity that is redeployed. Talks differ between engineering cost-per-PR data and business-automation claims audits.",
+   "contested": false,
+   "cids": [
+    "c1608",
+    "c1610",
+    "c1201",
+    "c1198",
+    "c1199",
+    "c1290",
+    "c1147",
+    "c1094",
+    "c1970"
+   ]
+  },
+  {
+   "key": "C-15",
+   "title": "Does more token spend raise output? Diminishing returns vs removing budget limits",
+   "idea": "Data shows top token consumers get ~2x output for ~10x tokens with diminishing returns, while Revolut reports large gains from removing token-budget pressure via self-hosting; the talks disagree on whether to constrain or unleash spend.",
+   "contested": true,
+   "cids": [
+    "c1185",
+    "c1609",
+    "c1514"
+   ]
+  },
+  {
+   "key": "C-16",
+   "title": "Tool and model choice barely explains team throughput",
+   "idea": "Across hundreds of companies, which tool or model a team uses explains almost none of merged-PR variance; individuals and team practices dominate, so better models alone will not fix a team.",
+   "contested": false,
+   "cids": [
+    "c1183",
+    "c1186"
+   ]
+  },
+  {
+   "key": "C-17",
+   "title": "Expand agent autonomy in stages earned by track record",
+   "idea": "Start in shadow or advisory mode with full review, move to sampled review and then exception handling as measured error and override rates allow, like onboarding a new hire. Talks differ in the stage definitions and in warning that fewer overrides can mean weaker review.",
+   "contested": false,
+   "cids": [
+    "c1292",
+    "c1978",
+    "c0534",
+    "c1660",
+    "c1837",
+    "c1876"
+   ]
+  },
+  {
+   "key": "C-18",
+   "title": "Set human oversight per action by cost of error, not one global setting",
+   "idea": "Decide approval and escalation per use case or action by weighing mistake cost and risk against alert fatigue and confirmation cost; most approval prompts are not real decisions. Talks differ between ops, security and UX framings.",
+   "contested": false,
+   "cids": [
+    "c1312",
+    "c1054",
+    "c1665",
+    "c2032",
+    "c1779",
+    "c1869"
+   ]
+  },
+  {
+   "key": "C-19",
+   "title": "Automate where results are bounded and cheap to verify; route the rest to humans",
+   "idea": "Good automation candidates have clear acceptance criteria, bounded scope and a human fallback; scope the automated path tightly to reach near-perfect accuracy and leave the long tail of exceptions semi-automated.",
+   "contested": false,
+   "cids": [
+    "c1073",
+    "c1095",
+    "c1922",
+    "c1627",
+    "c0091",
+    "c1134"
+   ]
+  },
+  {
+   "key": "C-20",
+   "title": "Deterministic code owns control flow; the LLM only interprets and judges",
+   "idea": "Put workflow, evidence and actions in deterministic software or engines, use models at typed boundaries for judgment, and progressively replace unreliable prompted behavior with code; don't use ML where simple methods suffice.",
+   "contested": false,
+   "cids": [
+    "c0671",
+    "c1698",
+    "c1070",
+    "c0182",
+    "c1302"
+   ]
+  },
+  {
+   "key": "C-21",
+   "title": "Forward-deployed engineering should upstream customer work into reusable product",
+   "idea": "FDE engagements scale only if each one builds on and feeds back into platform primitives rather than bespoke services or staff augmentation; tight scope, clear outcomes and a matched engagement model keep it product work.",
+   "contested": false,
+   "cids": [
+    "c0344",
+    "c0421",
+    "c0424",
+    "c0420",
+    "c0347",
+    "c0764",
+    "c0346",
+    "c0110",
+    "c1196"
+   ]
+  },
+  {
+   "key": "C-22",
+   "title": "Discover the real workflow by observing and shadowing experts on-site",
+   "idea": "Customers often cannot state a spec; embed with them, shadow analysts and the go-to domain expert, and build with your own product to feel their problems, then draft and shrink the real workflow.",
+   "contested": false,
+   "cids": [
+    "c0427",
+    "c0109",
+    "c1980",
+    "c1923",
+    "c1767"
+   ]
+  },
+  {
+   "key": "C-23",
+   "title": "Treat early design-partner pilots as discovery, then scale through self-service",
+   "idea": "Early large design partnerships are hands-on discovery of what the platform must become, distinct from the scalable motion; build the self-service sales machine before adding people and limit resource-heavy pilots.",
+   "contested": false,
+   "cids": [
+    "c0345",
+    "c1470",
+    "c1469"
+   ]
+  },
+  {
+   "key": "C-24",
+   "title": "Interrogate feature requests to find the real problem before building",
+   "idea": "Use JTBD problem trees, Kano classification and Mom Test questions about past behavior to expose cheaper alternatives and set engineering investment from discovery evidence rather than stated requests.",
+   "contested": false,
+   "cids": [
+    "c0425",
+    "c1429",
+    "c1430",
+    "c1894",
+    "c1895"
+   ]
+  },
+  {
+   "key": "C-25",
+   "title": "Start AI projects from business value and success metrics, not technology",
+   "idea": "Define the business problem, success metrics and value test first, then derive architecture, review points and evaluation; most proposed agent ideas fail a value or data-access test.",
+   "contested": false,
+   "cids": [
+    "c0106",
+    "c0207",
+    "c0990",
+    "c0989",
+    "c0422"
+   ]
+  },
+  {
+   "key": "C-26",
+   "title": "Tool access is not fluency: run structured AI enablement programs",
+   "idea": "Adoption needs dedicated time and structure: cohort programs, champions (1-9-90), maturity models, company-wide experiments and sustained adoption work, measured by fluency surveys rather than license counts.",
+   "contested": false,
+   "cids": [
+    "c0195",
+    "c1578",
+    "c1579",
+    "c1580",
+    "c0053",
+    "c0194",
+    "c1144"
+   ]
+  },
+  {
+   "key": "C-27",
+   "title": "Drive adoption by fitting AI into familiar workflows and habits",
+   "idea": "Introduce agents inside workflows people already use, reproduce familiar patterns before new ones, and bring skeptics into improving the tools; capabilities should be introduced gradually.",
+   "contested": false,
+   "cids": [
+    "c1441",
+    "c2027",
+    "c1661",
+    "c0833"
+   ]
+  },
+  {
+   "key": "C-28",
+   "title": "Let non-engineers build and ship with a shared platform and environment",
+   "idea": "Designers and other non-engineers can contribute code when given accessible dev environments, preview builds, coaching days and a platform that hides deployment, auth and distribution.",
+   "contested": false,
+   "cids": [
+    "c0054",
+    "c0338",
+    "c1077",
+    "c1078"
+   ]
+  },
+  {
+   "key": "C-29",
+   "title": "Govern skills like software packages with named owners",
+   "idea": "Treat skills as shared, versioned, access-controlled assets distributed via catalogs or marketplaces, prefer narrow reusable skills, and give each an ongoing owner as processes change.",
+   "contested": false,
+   "cids": [
+    "c1890",
+    "c2114",
+    "c1341",
+    "c1892",
+    "c1891"
+   ]
+  },
+  {
+   "key": "C-30",
+   "title": "Domain experts encode their know-how as executable skills and SOPs",
+   "idea": "Reliability comes from experts teaching agents real cases as explicit procedures or skills, with human review and corrections folded back in repeatedly.",
+   "contested": false,
+   "cids": [
+    "c2112",
+    "c1133",
+    "c1622"
+   ]
+  },
+  {
+   "key": "C-31",
+   "title": "Every agent needs a registered identity and an accountable human owner",
+   "idea": "Start governance with identity: a registry linking each agent or MCP server to an owner, cost and business purpose, governed scaffolding by default, and Three-Lines-style oversight with power to stop the agent.",
+   "contested": false,
+   "cids": [
+    "c1776",
+    "c0553",
+    "c1291",
+    "c1652",
+    "c0820"
+   ]
+  },
+  {
+   "key": "C-32",
+   "title": "Enterprise agent rollouts stall on integration, compliance and approvals, not models",
+   "idea": "PoCs fail to reach production because of integrations, audit trails, access controls, legal terms and months of cross-team approvals; find the decision owners early and turn concerns into engineering requirements.",
+   "contested": false,
+   "cids": [
+    "c0984",
+    "c0532",
+    "c1224",
+    "c1225",
+    "c1689",
+    "c1977"
+   ]
+  },
+  {
+   "key": "C-33",
+   "title": "Domain experts, not agents, define what good looks like",
+   "idea": "In specialized domains agents cannot define quality; put an accountable domain expert in the loop and turn their reasoning into evaluations and checks.",
+   "contested": false,
+   "cids": [
+    "c0717",
+    "c0451",
+    "c2057"
+   ]
+  },
+  {
+   "key": "C-34",
+   "title": "Agents are never done: the improvement-loop speed is the main lever",
+   "idea": "Agent work is a continuous loop of build, evaluate, monitor and optimize with short real-world feedback; the AI engineer's unit of work becomes the system running that loop, with outcomes fed back.",
+   "contested": false,
+   "cids": [
+    "c0753",
+    "c0156",
+    "c1191",
+    "c1348"
+   ]
+  },
+  {
+   "key": "C-35",
+   "title": "Run AI work as short time-boxed bets with explicit continue-or-kill reviews",
+   "idea": "Fund agentic AI as a portfolio of bets, plan in two-to-four-week windows and kill or continue on evidence rather than committing to a business case up front.",
+   "contested": false,
+   "cids": [
+    "c0533",
+    "c1532",
+    "c0444"
+   ]
+  },
+  {
+   "key": "C-36",
+   "title": "Keep models and providers swappable; agent infrastructure has a short half-life",
+   "idea": "Avoid vendor lock-in by keeping models, tools and infrastructure replaceable behind stable interfaces (signatures, validated segments, composable platforms), and expect to rebuild agents repeatedly.",
+   "contested": false,
+   "cids": [
+    "c1086",
+    "c1125",
+    "c0299",
+    "c1828",
+    "c0830",
+    "c2108",
+    "c0445"
+   ]
+  },
+  {
+   "key": "C-37",
+   "title": "Durable advantage is proprietary data, domain and harness, not the model",
+   "idea": "Commodity models produce a shared median; defensibility comes from data the model never saw, domain judges, product harness, a named novelty and problems that survive better models.",
+   "contested": false,
+   "cids": [
+    "c1373",
+    "c0849",
+    "c0848",
+    "c2041",
+    "c1606",
+    "c1374"
+   ]
+  },
+  {
+   "key": "C-38",
+   "title": "Agent-generated contributions overload open-source maintainers",
+   "idea": "AI-generated PRs, issues and reports burden maintainers, prompting bans, policies and auto-close defenses that demand a human voice.",
+   "contested": false,
+   "cids": [
+    "c0011",
+    "c0555"
+   ]
+  },
+  {
+   "key": "C-39",
+   "title": "Cheaper software makes previously uneconomic software worth building",
+   "idea": "As agents shrink build cost, nice-to-have software and former startups become viable side projects, pushing build over buy and rethinking project scale.",
+   "contested": false,
+   "cids": [
+    "c0809",
+    "c0331"
+   ]
+  },
+  {
+   "key": "C-40",
+   "title": "Adaptive per-user software: canonical stem plus bounded divergences",
+   "idea": "When scoped changes are cheap, replace one frozen artifact with per-user divergences that are isolated and reversible, though testing, provenance and outcome measurement remain unsolved.",
+   "contested": false,
+   "cids": [
+    "c0816",
+    "c0817"
+   ]
+  },
+  {
+   "key": "C-41",
+   "title": "Production agents should run one firm-defined process, simple for any user",
+   "idea": "Coding-agent-style products push competency and process design onto users; production agents should consistently execute the process the firm signs off on.",
+   "contested": false,
+   "cids": [
+    "c1395",
+    "c1396"
+   ]
+  },
+  {
+   "key": "C-42",
+   "title": "Own and transform service businesses rather than sell AI into them",
+   "idea": "Outside vendors hit integration and incentive walls; owning the business gives tacit knowledge and data to automate exceptions, with explicit criteria for picking targets and redeploying capacity.",
+   "contested": false,
+   "cids": [
+    "c1267",
+    "c1268"
+   ]
+  },
+  {
+   "key": "C-43",
+   "title": "Price AI products as a subscription base plus usage credits",
+   "idea": "Hybrid pricing protects margins from variable inference cost while billing in customer-perceived units with spend visibility and prepaid credits.",
+   "contested": false,
+   "cids": [
+    "c0515",
+    "c1620"
+   ]
+  },
+  {
+   "key": "C-44",
+   "title": "GTM agents run on a unified, queryable customer data layer",
+   "idea": "Treat GTM as a data problem: fuse CRM and behavioral signals into one model that agents and reps both query, trigger durable workflows on signals, and design handoffs with human reps.",
+   "contested": false,
+   "cids": [
+    "c1802",
+    "c0176",
+    "c1190",
+    "c1973"
+   ]
+  },
+  {
+   "key": "C-45",
+   "title": "Agents now choose your tool: measure and optimize how agents find and use it",
+   "idea": "Agents' recommendations drive adoption, so evaluate agent traces and journeys, fix docs and discoverability, and track GEO-style recommendation baselines as a metric.",
+   "contested": false,
+   "cids": [
+    "c1715",
+    "c1716",
+    "c2060",
+    "c1738",
+    "c1737"
+   ]
+  },
+  {
+   "key": "C-46",
+   "title": "Expose sites and docs to agents via structured, semantic interfaces",
+   "idea": "Agents should call defined actions (WebMCP, MCP) and read agent-oriented docs instead of scraping UIs; semantic HTML and accessibility remain prerequisites.",
+   "contested": false,
+   "cids": [
+    "c0099",
+    "c0752",
+    "c1009",
+    "c1230"
+   ]
+  },
+  {
+   "key": "C-47",
+   "title": "Agents as buyers need agent-readable catalogs, payment tokens and spending controls",
+   "idea": "Agents are product, buyer and user at once; commerce needs structured catalogs, tokenized payment, deferred payment, spending limits, disclosure and audit logs.",
+   "contested": false,
+   "cids": [
+    "c1621",
+    "c1433",
+    "c1840",
+    "c1667",
+    "c1668"
+   ]
+  },
+  {
+   "key": "C-48",
+   "title": "Per-request crypto micropayments (x402) for agent payments",
+   "idea": "x402 revives HTTP 402 so agents pay per request, but talks disagree on viability: wallet friction, double-spend risk, fixed-price conflicts with long-running tools; alternatives include charge-and-refund, batch settlement and prepaid tokens.",
+   "contested": true,
+   "cids": [
+    "c1080",
+    "c1240",
+    "c1241",
+    "c1242",
+    "c1274",
+    "c1275",
+    "c1276",
+    "c1676"
+   ]
+  },
+  {
+   "key": "C-49",
+   "title": "Generative UI: compose from a constrained component catalog vs free-form HTML",
+   "idea": "Most talks find free-form model-written UI inconsistent and hard to trust, favoring declarative or schema-defined components where catalog curation is the control surface; one advocates letting models return rich HTML visualizations directly.",
+   "contested": true,
+   "cids": [
+    "c0030",
+    "c0031",
+    "c1992",
+    "c1993",
+    "c0895"
+   ]
+  },
+  {
+   "key": "C-50",
+   "title": "Deliver model-generated UI through versioned contracts and a BFF",
+   "idea": "Use version-aware rendering contracts so old clients fall back safely, and stream structured UI progressively through a Backend-for-Frontend that handles platform rendering.",
+   "contested": false,
+   "cids": [
+    "c0066",
+    "c0067"
+   ]
+  },
+  {
+   "key": "C-51",
+   "title": "Tools can return interactive UI into chat via sandboxed MCP Apps",
+   "idea": "MCP Apps let a tool return a branded interactive UI fragment rendered in a sandboxed iframe, preserving context and creating a new distribution channel; plan for CSP/CORS limits and heavy re-renders.",
+   "contested": false,
+   "cids": [
+    "c0205",
+    "c0516",
+    "c0521",
+    "c1739",
+    "c1010",
+    "c1192"
+   ]
+  },
+  {
+   "key": "C-52",
+   "title": "Keep the model and the rendered UI in sync",
+   "idea": "Anything a widget shows must also reach the model as data, user interactions must be reported back, and search should be separate from rendering so the model can reason before displaying; private data can be selectively withheld.",
+   "contested": false,
+   "cids": [
+    "c1108",
+    "c1109",
+    "c1110",
+    "c0517"
+   ]
+  },
+  {
+   "key": "C-53",
+   "title": "Supervise agent fleets through an at-a-glance control plane",
+   "idea": "When many agents run in parallel, human attention at approval gates is the limit, so interfaces should show work, blockers and handoffs at a glance like an RTS game with fast bundled approvals.",
+   "contested": false,
+   "cids": [
+    "c0068",
+    "c1981",
+    "c1176"
+   ]
+  },
+  {
+   "key": "C-54",
+   "title": "Make agent work visible, interruptible and reversible so users dare to delegate",
+   "idea": "Show plans for approval, live progress, traces and decomposed steps users can steer, and make actions undoable, instead of a spinner then a final answer.",
+   "contested": false,
+   "cids": [
+    "c0222",
+    "c0931",
+    "c0834",
+    "c0092",
+    "c0932"
+   ]
+  },
+  {
+   "key": "C-55",
+   "title": "Delegate whole jobs to supervised AI workers instead of chat",
+   "idea": "Chat with citations leaves verification and execution to the user; design for delegating an entire job with exceptions returned, and build software meant to run without a human at every step.",
+   "contested": false,
+   "cids": [
+    "c0221",
+    "c1870",
+    "c0929"
+   ]
+  },
+  {
+   "key": "C-56",
+   "title": "Humans and agents collaborate on a shared spatial canvas, not a chat sidebar",
+   "idea": "Agents acting visibly on a shared canvas, with both screenshots and structured data, and shared visual annotation let collaborators point at what is wrong.",
+   "contested": false,
+   "cids": [
+    "c0095",
+    "c1211",
+    "c0566"
+   ]
+  },
+  {
+   "key": "C-57",
+   "title": "Reviewers anchor on AI verdicts; elicit independent human judgment first",
+   "idea": "Showing the AI recommendation first causes cognitive surrender; have the human decide before seeing the verdict, split the decision and surface the AI's assumptions, which also yields cleaner training labels.",
+   "contested": false,
+   "cids": [
+    "c0164",
+    "c0165",
+    "c0166"
+   ]
+  },
+  {
+   "key": "C-58",
+   "title": "Decouple agent output streams from the client connection",
+   "idea": "Streaming over a single SSE connection loses output on disconnect; publish to a durable session channel so reconnects, multiple devices and human handoffs share one history.",
+   "contested": false,
+   "cids": [
+    "c0982",
+    "c0983"
+   ]
+  },
+  {
+   "key": "C-59",
+   "title": "Give design agents taste via explicit anti-slop rules, references and human direction",
+   "idea": "Generated design converges on slop unless steered by written design systems, anti-pattern rules, strong visual references and specific human direction; taste and audience context must come from a person.",
+   "contested": false,
+   "cids": [
+    "c0804",
+    "c0805",
+    "c1965",
+    "c1966",
+    "c2066",
+    "c1177",
+    "c0839"
+   ]
+  },
+  {
+   "key": "C-60",
+   "title": "Design-code roundtrips drift; guard them with deterministic checks",
+   "idea": "No tested tool keeps design and code losslessly in sync with provenance, so detect and correct drift with deterministic guardrails under human control.",
+   "contested": false,
+   "cids": [
+    "c1744",
+    "c1745"
+   ]
+  },
+  {
+   "key": "C-61",
+   "title": "Encode accessibility as concrete behavioral rules for coding agents",
+   "idea": "Generic 'be accessible' advice fails; give agents concrete rules (semantic HTML first, specific ARIA and keyboard behavior) plus an agent audit and human testing.",
+   "contested": false,
+   "cids": [
+    "c1171",
+    "c1931"
+   ]
+  },
+  {
+   "key": "C-62",
+   "title": "Interaction design, not model capability, limits AI's value",
+   "idea": "Models advanced while interaction stayed a batch punch-card protocol, leaving a capability overhang that product experience must unlock for non-engineers.",
+   "contested": false,
+   "cids": [
+    "c0821",
+    "c1628"
+   ]
+  },
+  {
+   "key": "C-63",
+   "title": "Discover preferences by reacting to generated options, not upfront articulation",
+   "idea": "Users often cannot state what they want; run a discovery phase, show options visually and use fast generation to shape preferences through making.",
+   "contested": false,
+   "cids": [
+    "c1645",
+    "c1646",
+    "c1952"
+   ]
+  },
+  {
+   "key": "C-64",
+   "title": "Have the agent interview you before it generates",
+   "idea": "Start scripts or tools by letting the agent question you to draw out beliefs, stories and the spec, instead of prompting it to write from a topic.",
+   "contested": false,
+   "cids": [
+    "c1752",
+    "c1753"
+   ]
+  },
+  {
+   "key": "C-65",
+   "title": "Be candid with users about limitations and what to verify",
+   "idea": "State what works, what must be verified and what is out of scope; honesty builds more trust than overclaiming.",
+   "contested": false,
+   "cids": [
+    "c0835",
+    "c1402"
+   ]
+  },
+  {
+   "key": "C-66",
+   "title": "Can autonomous agents do real research?",
+   "idea": "One talk reports an autonomous agent with PR-style quality gates setting leaderboard records; another argues short optimization runs lack competing hypotheses and real experiments, so they are not self-improving research.",
+   "contested": true,
+   "cids": [
+    "c0342",
+    "c0412"
+   ]
+  },
+  {
+   "key": "C-67",
+   "title": "Vision backbones: learned vs hard-coded spatial inductive bias",
+   "idea": "Plain ViTs win with enough pretraining by learning CNN biases, while hierarchical ViTs reintroduce spatial bias for speed; pretraining and backbone choice set segmentation model speed.",
+   "contested": false,
+   "cids": [
+    "c0454",
+    "c0455"
+   ]
+  },
+  {
+   "key": "C-68",
+   "title": "Graph embeddings boost tabular fraud models if built leakage-free",
+   "idea": "Adding GraphSAGE embeddings to an existing XGBoost model raised detection at matched alert rates, provided graphs are temporally disjoint and labels excluded to avoid leakage.",
+   "contested": false,
+   "cids": [
+    "c1552",
+    "c1553"
+   ]
+  },
+  {
+   "key": "C-69",
+   "title": "Forecasting agents: turning evidence into a number is the hard step",
+   "idea": "An agent beat bias-corrected analyst consensus on revenue forecasts; retrieval is easy, the hard part is converting found evidence into a numeric estimate.",
+   "contested": false,
+   "cids": [
+    "c1624",
+    "c1625"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0075",
+  "c0398",
+  "c0428",
+  "c0434",
+  "c0585",
+  "c0631",
+  "c1020",
+  "c1071",
+  "c1148",
+  "c1237",
+  "c1238",
+  "c1301",
+  "c1368",
+  "c1450",
+  "c1619",
+  "c0101",
+  "c0726",
+  "c0765",
+  "c0930",
+  "c1082",
+  "c1151",
+  "c1337",
+  "c1507",
+  "c1587",
+  "c1601",
+  "c0061",
+  "c0124",
+  "c0157",
+  "c0172",
+  "c0193",
+  "c0202",
+  "c0203",
+  "c0204",
+  "c0371",
+  "c0559",
+  "c0639",
+  "c0749",
+  "c0813",
+  "c0814",
+  "c0815",
+  "c0840",
+  "c0891",
+  "c0944",
+  "c1061",
+  "c1149",
+  "c1273",
+  "c1313",
+  "c1389",
+  "c1391",
+  "c1428",
+  "c1967",
+  "c2105"
+ ],
+ "noise": [
+  "c0153",
+  "c0430"
+ ]
+}

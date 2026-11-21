@@ -1,0 +1,919 @@
+{
+ "clusters": [
+  {
+   "key": "E-01",
+   "title": "Bigger context windows degrade quality; curate context instead of stuffing it",
+   "idea": "Accuracy drops well before the advertised window (context rot, lost-in-the-middle), so tasks should be sized to a 'smart zone' and context curated. One talk argues the opposite: long-horizon agents need million-token windows to avoid lossy summarization; another notes long context is also uneconomical versus retrieval.",
+   "contested": true,
+   "cids": [
+    "c0001",
+    "c0960",
+    "c1444",
+    "c2103",
+    "c1298",
+    "c0012",
+    "c0560"
+   ]
+  },
+  {
+   "key": "E-02",
+   "title": "Prune system prompts and scaffolding on every model upgrade",
+   "idea": "Instructions written for older models become debt: they constrain stronger models, raise cost and contradict each other. Talks differ between general 'cut back' advice (Anthropic) and measured prompt audits with cost/accuracy numbers.",
+   "contested": false,
+   "cids": [
+    "c0027",
+    "c0231",
+    "c1096",
+    "c1097",
+    "c1098"
+   ]
+  },
+  {
+   "key": "E-03",
+   "title": "Treat skills and context docs as maintained artifacts: test, prune, flag staleness",
+   "idea": "Agent context should be generated from real failures, evaluated, pruned of what the model already knows or what changes nothing, and monitored for staleness. Talks differ on mechanism: quizzing the model, TDD-style lifecycle, demand-first authoring, or graph-based staleness detection.",
+   "contested": false,
+   "cids": [
+    "c0045",
+    "c2004",
+    "c0270",
+    "c1673",
+    "c0178"
+   ]
+  },
+  {
+   "key": "E-04",
+   "title": "Load skills progressively: keep the entry point small, reveal detail on demand",
+   "idea": "Skills should expose only short step lists and descriptions, with reference material loaded only when relevant, so instructions do not crowd context. Talks differ on who triggers the skill (model vs user) and on splitting skills into step-sized pieces.",
+   "contested": false,
+   "cids": [
+    "c0043",
+    "c0044",
+    "c0689",
+    "c1685",
+    "c2035",
+    "c0042",
+    "c0244"
+   ]
+  },
+  {
+   "key": "E-05",
+   "title": "MCP gives access, not judgment: skills/playbooks supply the procedure",
+   "idea": "Raw tool access lets an agent act but not act correctly; task-specific skills or playbooks encode security pitfalls, workflows and organizational procedure. Examples range from Postgres row-level security to company procedure resolver tables.",
+   "contested": false,
+   "cids": [
+    "c0248",
+    "c0250",
+    "c0320",
+    "c1481"
+   ]
+  },
+  {
+   "key": "E-06",
+   "title": "Ground agents in curated, current documentation rather than training data or open web",
+   "idea": "Agents do better with restricted, curated or freshly fetched primary docs than with stale training knowledge, an open internet or a stale vector store. Talks differ on whether docs are fetched at use time or curated up front.",
+   "contested": false,
+   "cids": [
+    "c0155",
+    "c0621",
+    "c0950"
+   ]
+  },
+  {
+   "key": "E-07",
+   "title": "Treat tool selection as retrieval: load only relevant tool definitions",
+   "idea": "With many tools, use tool search, embeddings or meta-tools to inject only top-K relevant tool schemas. Talks differ in mechanism (deferred tool search, semantic selection, toolsets, three meta tools) and in tuning K against accuracy and latency.",
+   "contested": false,
+   "cids": [
+    "c0035",
+    "c0710",
+    "c0747",
+    "c0748",
+    "c1482",
+    "c0649"
+   ]
+  },
+  {
+   "key": "E-08",
+   "title": "Large tool catalogs degrade agents; prefer skills, CLIs or gateways over raw MCP",
+   "idea": "More tools make agents slower, costlier and less accurate; consolidating behind gateways, CLIs or lazily loaded skills cut token use. Evidence ranges from GitHub's 100+ tool server to a fleetwide 40% token cut.",
+   "contested": false,
+   "cids": [
+    "c0648",
+    "c1017",
+    "c0693",
+    "c0074"
+   ]
+  },
+  {
+   "key": "E-09",
+   "title": "Code mode: model writes code against a typed API, not one tool per endpoint",
+   "idea": "Huge APIs (Cloudflare's ~2,600 endpoints) overwhelm context as tools; exposing search/execute and letting the model write code that composes calls keeps intermediate results out of context. Talks report 99%+ context reductions.",
+   "contested": false,
+   "cids": [
+    "c0036",
+    "c0238",
+    "c0518",
+    "c0519",
+    "c0952",
+    "c1194"
+   ]
+  },
+  {
+   "key": "E-10",
+   "title": "Keep large tool outputs out of context: externalize, point, compress",
+   "idea": "Store large tool results as files or pointers, show truncated or summarized views (accessibility tree, semantic trace summaries), and let the agent inspect them with code. One talk frames this as four strategies: externalize, select, compress, isolate.",
+   "contested": false,
+   "cids": [
+    "c0185",
+    "c1988",
+    "c2102",
+    "c2101",
+    "c1117",
+    "c1182",
+    "c1654"
+   ]
+  },
+  {
+   "key": "E-11",
+   "title": "Control token cost with prompt caching, routing and trimmed system prompts",
+   "idea": "Agent cost is dominated by re-sent context; keep cacheable prefixes byte-stable, route easy requests to cheaper models, move material out of large system prompts and A/B task-specific context bundles.",
+   "contested": false,
+   "cids": [
+    "c1014",
+    "c1099",
+    "c1162",
+    "c2064"
+   ]
+  },
+  {
+   "key": "E-12",
+   "title": "Isolate work in subagents so intermediate output never reaches the main context",
+   "idea": "Delegate search, test loops, image analysis or subtasks to subagents with their own context, returning bounded summaries. Talks differ on whether subagents inherit prompts and on giving workers only task-level specs.",
+   "contested": false,
+   "cids": [
+    "c0123",
+    "c0523",
+    "c0922",
+    "c2094",
+    "c1518",
+    "c1546",
+    "c0293"
+   ]
+  },
+  {
+   "key": "E-13",
+   "title": "Compaction is lossy: persist progress on disk and restart fresh sessions",
+   "idea": "Free-form summarization of long sessions is unreliable; persist specs, progress notes and handoffs to files so a fresh context can resume, and measure compaction strategies against a full-history baseline.",
+   "contested": false,
+   "cids": [
+    "c0070",
+    "c0442",
+    "c0470",
+    "c0382",
+    "c0460",
+    "c0265"
+   ]
+  },
+  {
+   "key": "E-14",
+   "title": "Keep history outside the window and retrieve it on demand each turn",
+   "idea": "Instead of carrying the whole conversation, store the session externally and rebuild context per turn by retrieval, which handles topic switches and interruptions better than relying on what compaction kept.",
+   "contested": false,
+   "cids": [
+    "c0233",
+    "c0461",
+    "c1413"
+   ]
+  },
+  {
+   "key": "E-15",
+   "title": "Recursive language models: input lives in a REPL, the model slices it with code",
+   "idea": "The prompt or codebase lives as a variable in a REPL; the model inspects it with code and recursively sub-queries itself over slices, keeping the main context small. Talks cite gains on long-context benchmarks and decomposable tasks like log analysis.",
+   "contested": false,
+   "cids": [
+    "c0599",
+    "c0601",
+    "c1461",
+    "c1462",
+    "c0633"
+   ]
+  },
+  {
+   "key": "E-16",
+   "title": "Agents fail on missing organizational context; build a shared, governed context layer",
+   "idea": "Enterprise agents act like brilliant new hires lacking business definitions, norms and past incidents; a shared context layer with ranking, conflict resolution, permissions and freshness is needed beyond MCP connectivity or static AGENTS files.",
+   "contested": false,
+   "cids": [
+    "c0188",
+    "c0987",
+    "c1193",
+    "c0056",
+    "c0189",
+    "c0714",
+    "c0179",
+    "c1085"
+   ]
+  },
+  {
+   "key": "E-17",
+   "title": "Coding agents need team history: past decisions, PRs, conventions and the why",
+   "idea": "Mergeable code requires context humans supply manually today: PR history, decisions, conventions and architecture rationale, served by a context engine with social-graph ranking. Talks differ on how conflicts between code and older docs are resolved.",
+   "contested": false,
+   "cids": [
+    "c1252",
+    "c1681",
+    "c1682",
+    "c1454",
+    "c0526",
+    "c0527",
+    "c0713",
+    "c1997",
+    "c1747"
+   ]
+  },
+  {
+   "key": "E-18",
+   "title": "Code understanding needs compiler-accurate graphs and indexes, not bigger windows",
+   "idea": "Large codebases are a search problem: dependency maps, API context graphs and local snippet indexes with cross-file relationships beat dumping files. Talks weigh graph freshness and processing cost.",
+   "contested": false,
+   "cids": [
+    "c1629",
+    "c1702",
+    "c0961",
+    "c0898",
+    "c0899",
+    "c1443"
+   ]
+  },
+  {
+   "key": "E-19",
+   "title": "Pre-index structure so agents navigate a domain without opening everything",
+   "idea": "Precompute hierarchies, folder summaries or file indexes so the agent picks where to look, bounding per-query cost regardless of corpus size.",
+   "contested": false,
+   "cids": [
+    "c0670",
+    "c1472",
+    "c0936"
+   ]
+  },
+  {
+   "key": "E-20",
+   "title": "Data agents need a curated semantic layer of metric definitions",
+   "idea": "The same metric means different things per team, so bigger models give confident wrong answers; authoritative KPI definitions, lineage and grain must be captured (deterministically where possible) with feedback loops. Per-user preference routing between valid definitions is unresolved.",
+   "contested": false,
+   "cids": [
+    "c0311",
+    "c0310",
+    "c0312",
+    "c2020"
+   ]
+  },
+  {
+   "key": "E-21",
+   "title": "Encode the enterprise as a queryable ontology/knowledge graph shared by agents",
+   "idea": "Business ontologies mapped to technical sources form a shared layer agents query, avoiding per-agent source discovery; one talk calls this the enterprise's moat.",
+   "contested": false,
+   "cids": [
+    "c1044",
+    "c0842",
+    "c0841",
+    "c0976"
+   ]
+  },
+  {
+   "key": "E-22",
+   "title": "Cross-silo agent collaboration is a shared-knowledge problem, not live agent chat",
+   "idea": "Getting the right information across organizational silos into context matters more than agents querying each other; AI-maintained shared knowledge with disclosure policies avoids conflicting answers between disconnected agents.",
+   "contested": false,
+   "cids": [
+    "c1570",
+    "c1571",
+    "c0988"
+   ]
+  },
+  {
+   "key": "E-23",
+   "title": "Control voice with layered structure, not tone instructions",
+   "idea": "Generic AI-sounding output is avoided by explicit guidelines, identity rules, example-anchored voice and post-generation vetoes rather than adjectives in the prompt.",
+   "contested": false,
+   "cids": [
+    "c0180",
+    "c0724"
+   ]
+  },
+  {
+   "key": "E-24",
+   "title": "Tier context sources by freshness: skills, cache, synced data, live APIs",
+   "idea": "A router checks skills, then cached data against freshness SLAs, then live APIs; synced data serves broad semantic queries while live APIs serve specific lookups.",
+   "contested": false,
+   "cids": [
+    "c1303",
+    "c1304"
+   ]
+  },
+  {
+   "key": "E-25",
+   "title": "Precompute a user world model offline instead of retrieving disconnected items",
+   "idea": "Answering 'what should I focus on' needs relationships across email, tasks, calendar and CRM precomputed offline into a model the assistant reads, with fallback to last verified context.",
+   "contested": false,
+   "cids": [
+    "c0369",
+    "c0370",
+    "c0247"
+   ]
+  },
+  {
+   "key": "E-26",
+   "title": "Offline 'dreaming' consolidates and corrects agent memory between sessions",
+   "idea": "Besides in-band writes, a background pass reviews transcripts and corrections to deduplicate, reconcile and update memory. Anthropic's version is a research preview whose benefit should be verified with evals.",
+   "contested": false,
+   "cids": [
+    "c0034",
+    "c0235",
+    "c2007",
+    "c0770"
+   ]
+  },
+  {
+   "key": "E-27",
+   "title": "Feed execution traces and outcomes back into what the agent reads next",
+   "idea": "Traces, eval results and business outcomes only help if distilled lessons are written back into retrieval or context; talks differ on ranking by observed utility vs labeling corrections as training data.",
+   "contested": false,
+   "cids": [
+    "c0546",
+    "c1492",
+    "c0866",
+    "c1121",
+    "c0177"
+   ]
+  },
+  {
+   "key": "E-28",
+   "title": "Distill successful agent traces into reusable skills",
+   "idea": "Recurring successful runs (golden sessions, recipes with more wins than losses) are converted into SKILL.md files or workflows, cutting cost and raising determinism; failures expose missing guardrails. Talks differ on distillation checks and retiring raw recipes.",
+   "contested": false,
+   "cids": [
+    "c0150",
+    "c0867",
+    "c1917",
+    "c2033",
+    "c1672",
+    "c1153",
+    "c1415",
+    "c2085"
+   ]
+  },
+  {
+   "key": "E-29",
+   "title": "Continual learning for agents lives in non-parametric memory, not weights",
+   "idea": "Agents fail at continual learning through poor memory management; compressing experience into context, memory and skills adds knowledge immediately and auditably. Talks frame it as intrinsic/extrinsic/learned knowledge or memory vs judgment.",
+   "contested": false,
+   "cids": [
+    "c0147",
+    "c0481",
+    "c0482",
+    "c1916",
+    "c1711",
+    "c0545"
+   ]
+  },
+  {
+   "key": "E-30",
+   "title": "Consumer memory moved to background-updated profiles, with staleness and visibility risks",
+   "idea": "Assistants evolved from injected saved-fact lists to dense running profiles; benefits are faster understanding, failure modes are stale or wrongly inferred memories users cannot see.",
+   "contested": false,
+   "cids": [
+    "c0496",
+    "c0497",
+    "c0933"
+   ]
+  },
+  {
+   "key": "E-31",
+   "title": "Memory needs governance: invalidation, scoping, redaction and harmful-memory feedback",
+   "idea": "Most memory failures are management problems: stale facts, wrong scope, poisoned instructions, bias. Remedies include temporal invalidation instead of overwriting, per-customer separation, redaction before embedding and human/eval review of procedural changes.",
+   "contested": false,
+   "cids": [
+    "c0228",
+    "c1911",
+    "c1909",
+    "c0409",
+    "c1494"
+   ]
+  },
+  {
+   "key": "E-32",
+   "title": "Every memory fact must trace back to the episodes that produced it",
+   "idea": "Set-valued, mutation-surviving lineage from facts to source episodes enables audit, debugging of bad memories and compliance deletion. Talks span graph memory, persistent agent memory and context-tier provenance records.",
+   "contested": false,
+   "cids": [
+    "c0225",
+    "c0226",
+    "c0227",
+    "c1283",
+    "c1305"
+   ]
+  },
+  {
+   "key": "E-33",
+   "title": "Split agent memory into typed tiers: working, episodic, semantic, procedural, reasoning",
+   "idea": "Memory is a pipeline with distinct types (short/long-term, episodic, semantic, procedural, reasoning traces), each with its own storage and retrieval, not one retrieval store.",
+   "contested": false,
+   "cids": [
+    "c0268",
+    "c0981",
+    "c1493",
+    "c1908",
+    "c1113"
+   ]
+  },
+  {
+   "key": "E-34",
+   "title": "Graph-structured memory vs simple files and SQL",
+   "idea": "Some talks argue markdown or embedding-only memory loses relationships and needs graphs or real databases (POLE+O, context graphs); others found a capped per-user markdown file or simple SQL plus hybrid search more inspectable and sufficient.",
+   "contested": true,
+   "cids": [
+    "c0276",
+    "c0843",
+    "c1989",
+    "c2086",
+    "c1671",
+    "c1179",
+    "c0174"
+   ]
+  },
+  {
+   "key": "E-35",
+   "title": "Store decision traces so agents retrieve precedent and reasoning, not just facts",
+   "idea": "Recording what was decided, why and with what evidence lets agents explain decisions, stay consistent with earlier ones and reuse precedent across shifts and teammates; a decision ledger counters long-horizon drift.",
+   "contested": false,
+   "cids": [
+    "c0267",
+    "c0980",
+    "c0979",
+    "c0524",
+    "c0525",
+    "c1239",
+    "c1666",
+    "c2081"
+   ]
+  },
+  {
+   "key": "E-36",
+   "title": "A personal note base (Obsidian) as the agent's memory and research layer",
+   "idea": "Personal agents read and update a linked markdown knowledge base, enriched with sources and backlinks and maintained by scheduled agents, so reusable research persists beyond chat.",
+   "contested": false,
+   "cids": [
+    "c0126",
+    "c0469",
+    "c0506",
+    "c0507",
+    "c0860",
+    "c0861"
+   ]
+  },
+  {
+   "key": "E-37",
+   "title": "Make an immutable event log the agent's source of truth",
+   "idea": "An append-only session/event log with projections enables replay, crash recovery, forking, model switching and trying new compaction strategies later; the harness becomes stateless and replaceable.",
+   "contested": false,
+   "cids": [
+    "c0063",
+    "c0790",
+    "c1407",
+    "c1411",
+    "c0501"
+   ]
+  },
+  {
+   "key": "E-38",
+   "title": "Separate conversation state from sandbox state via server-side IDs",
+   "idea": "Server-held interaction IDs carry conversational context without resending history, while environment IDs let a fresh agent reuse an existing sandbox filesystem.",
+   "contested": false,
+   "cids": [
+    "c1417",
+    "c1480",
+    "c1479",
+    "c1862"
+   ]
+  },
+  {
+   "key": "E-39",
+   "title": "Video memory must link scenes across files and time",
+   "idea": "Tokenizing video into frames loses motion and causality; memory needs multimodal embeddings, reasoning models and context graphs across a corpus.",
+   "contested": false,
+   "cids": [
+    "c0888",
+    "c0889"
+   ]
+  },
+  {
+   "key": "E-40",
+   "title": "Hybrid retrieval: fuse lexical and vector results (RRF), then rerank",
+   "idea": "Semantic search blurs exact identifiers and BM25 misses paraphrase; fuse both with reciprocal rank fusion or weighted scores, optionally rerank. Implementations range from plain Postgres SQL to multi-signal memory recall.",
+   "contested": false,
+   "cids": [
+    "c0214",
+    "c1357",
+    "c1598",
+    "c1742",
+    "c1910"
+   ]
+  },
+  {
+   "key": "E-41",
+   "title": "Agentic iterative search over a retrieval toolbox vs fixed pipelines",
+   "idea": "Many talks argue agents should iteratively use grep, BM25, vector, filters and section reads, retrying when results fall short. Others show the cost: agentic search eats 30-50% of tokens or costs 100-1,000x more, and vector-only matched it at a quarter of the cost on one code benchmark.",
+   "contested": true,
+   "cids": [
+    "c0077",
+    "c0587",
+    "c1234",
+    "c2091",
+    "c2092",
+    "c1364",
+    "c0078",
+    "c1600"
+   ]
+  },
+  {
+   "key": "E-42",
+   "title": "Evidence acquisition is the bottleneck: close the oracle gap with better retrieval",
+   "idea": "Models answer well when handed evidence but poorly when they must find it; better search harnesses, searcher subagents, multimodal retrieval and RL training narrow the gap.",
+   "contested": false,
+   "cids": [
+    "c0462",
+    "c1068",
+    "c1728",
+    "c0463",
+    "c1729"
+   ]
+  },
+  {
+   "key": "E-43",
+   "title": "Embeddings are cached computation paid at index time",
+   "idea": "Embedding is precomputed relevance work that makes query-time retrieval cheap and can augment agent grep exploration; indexes can be reused across users.",
+   "contested": false,
+   "cids": [
+    "c0135",
+    "c0589",
+    "c1120"
+   ]
+  },
+  {
+   "key": "E-44",
+   "title": "Retrieval for agent callers should be precise, lexical and database-like",
+   "idea": "Agents issue far more searches than humans and can write specific keyword queries, so exact-match, inspectable retrieval becomes a strong default; code is the easy case because identifiers give durable cues.",
+   "contested": false,
+   "cids": [
+    "c1119",
+    "c2024",
+    "c1067",
+    "c1727"
+   ]
+  },
+  {
+   "key": "E-45",
+   "title": "Answer identity/date/filter questions with structured queries, not vector RAG",
+   "idea": "When correctness depends on identities, states and dates, translate the question into validated queries over a discovered schema with fuzzy identity resolution; embeddings cannot separate near-duplicate names.",
+   "contested": false,
+   "cids": [
+    "c1640",
+    "c1641",
+    "c1644",
+    "c2063",
+    "c2065",
+    "c0669"
+   ]
+  },
+  {
+   "key": "E-46",
+   "title": "Use graph traversal for multi-hop relational questions, seeded by vector search",
+   "idea": "Vector search finds similar things, graphs find connected ones; seed with retrieval then traverse with Cypher or PageRank. Talks caution that graphs fit where relationships dominate and that extraction must be idempotent.",
+   "contested": false,
+   "cids": [
+    "c0058",
+    "c0060",
+    "c0262",
+    "c0277",
+    "c0711",
+    "c1968",
+    "c0102",
+    "c1969",
+    "c1235"
+   ]
+  },
+  {
+   "key": "E-47",
+   "title": "Document parsing is the hard part of RAG; preserve layout and tables",
+   "idea": "Layout-aware parsing (OCR, VLMs, table structure, reading order) into a structured document model preserves what plain text extraction loses, and chunking should not split tables.",
+   "contested": false,
+   "cids": [
+    "c0561",
+    "c0727",
+    "c1209",
+    "c1236",
+    "c1394",
+    "c1709",
+    "c1819",
+    "c1599"
+   ]
+  },
+  {
+   "key": "E-48",
+   "title": "Parse selectively: cheap pass first, expensive vision only where needed, evaluated per stage",
+   "idea": "Hybrid pipelines combine fast OCR or PDF metadata with targeted visual inspection, separate bulk preprocessing from low-latency Q&A, and evaluate each pipeline stage rather than only final answers.",
+   "contested": false,
+   "cids": [
+    "c1210",
+    "c1592",
+    "c1710",
+    "c1820"
+   ]
+  },
+  {
+   "key": "E-49",
+   "title": "Chunk size is query-dependent; index at multiple granularities and fuse",
+   "idea": "No fixed chunk size is best; indexing at several window sizes and fusing document rankings matches or beats the best fixed size for 2-5x memory.",
+   "contested": false,
+   "cids": [
+    "c1425",
+    "c1426",
+    "c1427"
+   ]
+  },
+  {
+   "key": "E-50",
+   "title": "Curate the corpus (dedupe, stale removal, metadata enrichment) before tuning retrieval",
+   "idea": "Stale and duplicate documents crowd top-k; AI-assisted taxonomy, ontology-based metadata and structured attributes improve recall more than retriever changes.",
+   "contested": false,
+   "cids": [
+    "c1471",
+    "c1473",
+    "c2079",
+    "c2026"
+   ]
+  },
+  {
+   "key": "E-51",
+   "title": "Measure retrieval with a judgment set before adding stages like rerankers",
+   "idea": "A small hand-built benchmark lets each retrieval change, including rerankers, be justified by measured precision gains.",
+   "contested": false,
+   "cids": [
+    "c1358",
+    "c2025",
+    "c2082"
+   ]
+  },
+  {
+   "key": "E-52",
+   "title": "Enforce permissions and tenant isolation inside the index and storage layer",
+   "idea": "Post- or pre-filtering vectors by permission fails; native permission-aware indexes and per-tenant namespaces keep latency low and satisfy isolation.",
+   "contested": false,
+   "cids": [
+    "c1773",
+    "c1774",
+    "c1885",
+    "c1886"
+   ]
+  },
+  {
+   "key": "E-53",
+   "title": "Agents need owned, fresh, time-bounded web retrieval pipelines",
+   "idea": "Point-in-time web search cannot give history or leak-free backtests; repeated retrieval favors owned pipelines with schema validation and low latency over rented search vendors.",
+   "contested": false,
+   "cids": [
+    "c0826",
+    "c0827",
+    "c1308",
+    "c1380",
+    "c0464",
+    "c1626",
+    "c0343"
+   ]
+  },
+  {
+   "key": "E-54",
+   "title": "Cache-augmented generation pays off only for frequently queried documents",
+   "idea": "Splitting a corpus into KV-cached buckets queried in parallel avoids retrieval misses but trades cache lifetime and compute.",
+   "contested": false,
+   "cids": [
+    "c0937",
+    "c0938"
+   ]
+  },
+  {
+   "key": "E-55",
+   "title": "Cite every figure to source and keep arithmetic out of the model",
+   "idea": "For financial and claims answers, link each number to its filing, weight sources by authority, surface contradictions, corroborate extractions and compute with deterministic code.",
+   "contested": false,
+   "cids": [
+    "c0171",
+    "c0438",
+    "c1740",
+    "c1743",
+    "c0219",
+    "c0170"
+   ]
+  },
+  {
+   "key": "E-56",
+   "title": "Single agent vs multi-agent architectures",
+   "idea": "Some talks find multi-agent orchestration adds coordination overhead and fragments context, so a strong single loop with skills wins; others argue multiple narrow agents counter confirmation bias, attention dilution and bloat.",
+   "contested": true,
+   "cids": [
+    "c0744",
+    "c0962",
+    "c0974",
+    "c1111",
+    "c1990",
+    "c1226",
+    "c0775",
+    "c1163",
+    "c0522"
+   ]
+  },
+  {
+   "key": "E-57",
+   "title": "Verify with an independent agent in a separate context, ideally a different model",
+   "idea": "Self-grading in the producing context is biased; separate validators, juries or reviewer models with validation contracts written before code catch laziness and drift. Talks differ on cost and on structured completion claims.",
+   "contested": false,
+   "cids": [
+    "c0004",
+    "c0018",
+    "c0234",
+    "c0917",
+    "c1690",
+    "c1691",
+    "c0436",
+    "c0019",
+    "c0020"
+   ]
+  },
+  {
+   "key": "E-58",
+   "title": "Multi-agent coordination is a distributed-systems problem: idempotency, immutable state, compensation",
+   "idea": "Race conditions, lost replies and duplicate side effects need deterministic controls: immutable versioned state, idempotent operations, bounded retries, circuit breakers, watchdogs and boundaries enforced by the system rather than prompts.",
+   "contested": false,
+   "cids": [
+    "c0357",
+    "c0358",
+    "c0359",
+    "c2072",
+    "c2073",
+    "c2087",
+    "c0785",
+    "c0918",
+    "c1939"
+   ]
+  },
+  {
+   "key": "E-59",
+   "title": "Cross-framework agent messaging needs real transport primitives",
+   "idea": "Remote agent collaboration needs ordered delivery, retries, session continuity and identity that agent-as-tool calls and chat platforms lack; automating the human who routes messages between agents is the motivating case.",
+   "contested": false,
+   "cids": [
+    "c1227",
+    "c1912",
+    "c1913",
+    "c0643"
+   ]
+  },
+  {
+   "key": "E-60",
+   "title": "Event-driven, durable agents that sleep and wake instead of running continuously",
+   "idea": "Long-horizon work spans days of waiting, so agents subscribe to events, pause and resume via durable execution, and long-lived coordinators dispatch workers.",
+   "contested": false,
+   "cids": [
+    "c0998",
+    "c1053",
+    "c2055",
+    "c1497",
+    "c1920",
+    "c1589",
+    "c1175",
+    "c1604"
+   ]
+  },
+  {
+   "key": "E-61",
+   "title": "Run parallel coding agents in isolated worktrees or VMs under an orchestrator",
+   "idea": "Fleets of coding agents need isolated runtimes and branches to avoid conflicts, central review and humans on the loop; coordination between agents remains the missing primitive.",
+   "contested": false,
+   "cids": [
+    "c0549",
+    "c0292",
+    "c0471",
+    "c0808",
+    "c0806",
+    "c1132",
+    "c0563"
+   ]
+  },
+  {
+   "key": "E-62",
+   "title": "Coordinate agents through shared structured state, not free-form chat",
+   "idea": "Task boards, blackboards, dependency graphs and shared intent graphs with policy-gated changes coordinate agents with less overhead than conversation.",
+   "contested": false,
+   "cids": [
+    "c0064",
+    "c0112",
+    "c1212",
+    "c1938"
+   ]
+  },
+  {
+   "key": "E-63",
+   "title": "Declare outcomes and rubrics, let the harness choose the steps",
+   "idea": "Specify outcomes as contracts or rubrics and keep orchestration in prompts and skills rather than hard-coded state machines, so systems improve with each model release.",
+   "contested": false,
+   "cids": [
+    "c1152",
+    "c2009",
+    "c0021"
+   ]
+  },
+  {
+   "key": "E-64",
+   "title": "Decompose a domain workflow into specialized agents with human escalation",
+   "idea": "Split work into specialized agents or small models (eligibility, perception, research) chained or fanned out, escalating uncertain cases to humans.",
+   "contested": false,
+   "cids": [
+    "c0218",
+    "c2115",
+    "c1419",
+    "c2008",
+    "c0241"
+   ]
+  },
+  {
+   "key": "E-65",
+   "title": "Route subtasks to cheaper or specialized models, escalating uncertain cases",
+   "idea": "Cheap or specialized models handle common cases and subtasks, escalating to bigger models only when uncertain.",
+   "contested": false,
+   "cids": [
+    "c0655",
+    "c1897"
+   ]
+  },
+  {
+   "key": "E-66",
+   "title": "Agent-to-agent commerce needs discovery, verifiable identity and signed receipts",
+   "idea": "Agents transacting across organizations need registries, agent cards, signed facts and cryptographic receipts for each step, composed across protocols.",
+   "contested": false,
+   "cids": [
+    "c0093",
+    "c0094",
+    "c0554",
+    "c0755",
+    "c1207"
+   ]
+  },
+  {
+   "key": "E-67",
+   "title": "Design environments and incentives so agent collectives self-organize",
+   "idea": "Fixed harnesses fit bounded work; open problems call for environments with information, incentives, verifiers and governance from which collective behavior emerges.",
+   "contested": false,
+   "cids": [
+    "c0149",
+    "c1821",
+    "c1822",
+    "c1915"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0007",
+  "c0570",
+  "c0829",
+  "c1015",
+  "c1390",
+  "c1115",
+  "c1180",
+  "c1221",
+  "c1674",
+  "c0107",
+  "c0429",
+  "c0562",
+  "c1244",
+  "c1089",
+  "c1888",
+  "c1359",
+  "c0100",
+  "c0638",
+  "c0771",
+  "c1028",
+  "c1590",
+  "c1726",
+  "c0975",
+  "c1222",
+  "c1253",
+  "c2056",
+  "c1972",
+  "c0360"
+ ],
+ "noise": [
+  "c1245"
+ ]
+}

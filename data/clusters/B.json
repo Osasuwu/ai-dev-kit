@@ -1,0 +1,858 @@
+{
+ "clusters": [
+  {
+   "key": "B-01",
+   "title": "LLM judges must be calibrated against human labels before their scores are trusted",
+   "idea": "Judge outputs are only meaningful after measuring agreement with human or expert labels on held-out data (precision/recall, agreement thresholds). Talks differ on the mechanics: dev/test splits, pinned judge versions, recalibration from sampled production traces, or clinician review of judges.",
+   "contested": false,
+   "cids": [
+    "c0181",
+    "c0487",
+    "c0401",
+    "c0417",
+    "c0754",
+    "c1349",
+    "c1422",
+    "c1447",
+    "c2046",
+    "c1200",
+    "c1567"
+   ]
+  },
+  {
+   "key": "B-02",
+   "title": "Pick the cheapest evaluator per failure: deterministic checks first, LLM judges last",
+   "idea": "Code and deterministic checks handle what they can; LLM judges are reserved for fuzzy properties and agent-judges or annotation queues for the rest. Talks vary in where they draw the line and how they route low-confidence cases.",
+   "contested": false,
+   "cids": [
+    "c0674",
+    "c0508",
+    "c1421",
+    "c1327",
+    "c1377",
+    "c1800"
+   ]
+  },
+  {
+   "key": "B-03",
+   "title": "Production failures become regression eval cases in a continuous flywheel",
+   "idea": "Fixed offline datasets go stale; the eval set should be fed from production traces, especially failures, which become regression examples that fixes must pass. Talks differ on how cases are selected (sampling, annotation, customer-defined success) and on who owns the loop.",
+   "contested": false,
+   "cids": [
+    "c0287",
+    "c0489",
+    "c0514",
+    "c0949",
+    "c1005",
+    "c1424",
+    "c1521",
+    "c1781",
+    "c2013",
+    "c1269",
+    "c1325",
+    "c1955",
+    "c0475",
+    "c0582",
+    "c1398",
+    "c1399",
+    "c1055",
+    "c1794",
+    "c1991"
+   ]
+  },
+  {
+   "key": "B-04",
+   "title": "Monitor production with semantic issue detectors, not just latency and error rates",
+   "idea": "Status codes, uptime and latency hide agent quality problems; production needs online evaluators that detect specific issues (refusals, frustration, empty results, groundedness) and track their rates. Talks differ on detector type: binary classifiers, LLM judges, code signals.",
+   "contested": false,
+   "cids": [
+    "c0333",
+    "c0334",
+    "c1953",
+    "c1189",
+    "c1520",
+    "c0680",
+    "c0583",
+    "c0528"
+   ]
+  },
+  {
+   "key": "B-05",
+   "title": "Give coding agents production traces and runtime context so they can diagnose and fix",
+   "idea": "Agent-generated fixes are unreliable without production context; joining traces, runtime data and repository code via CLI/skills lets a coding agent locate faulty paths. Examples range from planted bugs to latency regressions and outdated tools.",
+   "contested": false,
+   "cids": [
+    "c0356",
+    "c1256",
+    "c1262",
+    "c1326",
+    "c1345",
+    "c1346",
+    "c1954",
+    "c0573",
+    "c0115"
+   ]
+  },
+  {
+   "key": "B-06",
+   "title": "Self-healing loop: trace-triggered agents propose fixes as PRs, humans approve",
+   "idea": "Monitors or failure clusters trigger an agent that investigates, replays, drafts a fix and opens a PR with validation results; a human decides what ships. Talks differ on how much independent review agents do before escalation.",
+   "contested": false,
+   "cids": [
+    "c0368",
+    "c0802",
+    "c1460",
+    "c1463",
+    "c1519",
+    "c1324",
+    "c1848",
+    "c1270",
+    "c1347",
+    "c1783"
+   ]
+  },
+  {
+   "key": "B-07",
+   "title": "Simulated users reproduce multi-turn conversations for pre-deployment agent evaluation",
+   "idea": "LLM-simulated users built from production-representative conversations or hazard lists exercise agents where A/B tests are unsafe or slow, and must themselves be validated as realistic. One talk argues simulations cover only a slice and real failures surface only in production conversations at scale.",
+   "contested": true,
+   "cids": [
+    "c0167",
+    "c0677",
+    "c0678",
+    "c0681",
+    "c1824",
+    "c0350",
+    "c1114",
+    "c0801"
+   ]
+  },
+  {
+   "key": "B-08",
+   "title": "Synthetic personas are unreliable stand-ins and need rigorous fidelity tests",
+   "idea": "Synthetic respondents and role-playing personas fail through confounders, prompt sensitivity and popular-culture composites; resampling one model is a single forecast, not more evidence. Remedies include temporally anchored, preregistered tests against period sources.",
+   "contested": false,
+   "cids": [
+    "c0567",
+    "c0568",
+    "c0798",
+    "c0799"
+   ]
+  },
+  {
+   "key": "B-09",
+   "title": "Grade agents by verifying end state and side effects, not implementation details",
+   "idea": "Define evals as task plus seeded environment plus a verifier that inspects resulting state, like black-box integration tests, so they survive model, framework and implementation changes. Talks add oracle-solution runs to validate verifiers first and judges only where state cannot be checked.",
+   "contested": false,
+   "cids": [
+    "c1217",
+    "c1218",
+    "c0351",
+    "c0624",
+    "c1526",
+    "c0702",
+    "c1530"
+   ]
+  },
+  {
+   "key": "B-10",
+   "title": "Public benchmarks are contaminated and saturated; use fresh or private held-out tasks",
+   "idea": "Leaked solutions, memorized tasks, unrealistic prompts and git-history leaks inflate public scores. Remedies: continuously mined decontaminated tasks, private held-out benchmarks from real usage, scrubbed histories.",
+   "contested": false,
+   "cids": [
+    "c0137",
+    "c0284",
+    "c0705",
+    "c0939",
+    "c0604",
+    "c0730",
+    "c0708"
+   ]
+  },
+  {
+   "key": "B-11",
+   "title": "Good benchmarks need expert-authored, expert-validated tasks with real headroom",
+   "idea": "Cheap synthetic or crowd tasks cause benchmaxxing; benchmarks should be human-authored, reviewed by domain experts for ambiguous specs and grading thresholds, and keep headroom. Talks differ on whether standardization or community expertise is the main lever.",
+   "contested": false,
+   "cids": [
+    "c0139",
+    "c0942",
+    "c0758",
+    "c0736",
+    "c0072",
+    "c1090",
+    "c0759",
+    "c0884"
+   ]
+  },
+  {
+   "key": "B-12",
+   "title": "Weak verifiers and judges mis-score agents: passing the grader is not correctness",
+   "idea": "Graders accept wrong solutions, reject valid ones and overstate success versus expert or maintainer acceptance; verifiers must be adversarially tested and aligned exactly with the prompt. Web-agent talks show judge inflation and rubric-based verification fixes.",
+   "contested": false,
+   "cids": [
+    "c0138",
+    "c1361",
+    "c0940",
+    "c0941",
+    "c1563",
+    "c1564",
+    "c1565"
+   ]
+  },
+  {
+   "key": "B-13",
+   "title": "Agents reward-hack and cheat benchmarks; sandboxing and defenses are mandatory",
+   "idea": "Agents fetch original issues, use other credentials, edit grading scripts and exploit structure. Talks prescribe blocked egress, non-exploitable task construction, logged calls, open traces, audits and trajectory analysis to detect hacking.",
+   "contested": false,
+   "cids": [
+    "c0731",
+    "c1384",
+    "c0729",
+    "c0258",
+    "c0330",
+    "c1386"
+   ]
+  },
+  {
+   "key": "B-14",
+   "title": "Benchmark scores measure the whole configuration; record and fix harness and settings",
+   "idea": "Harness, sandbox, hardware, sampling, timeouts and caching change scores enough to reverse rankings, and environment defects masquerade as model weakness. Report and freeze the full configuration and inspect traces before trusting a surprising score.",
+   "contested": false,
+   "cids": [
+    "c0317",
+    "c0732",
+    "c1435",
+    "c2029",
+    "c1639",
+    "c1438",
+    "c0169"
+   ]
+  },
+  {
+   "key": "B-15",
+   "title": "Report distributions over repeated runs; single runs and pass@k mislead",
+   "idea": "Agent non-determinism makes one run meaningless; use repeats, proper intervals, and reliability metrics (pass^k, worst-of, solid) rather than best-of. Talks show pass@k rewarding search budget and naive confidence intervals badly under-covering.",
+   "contested": false,
+   "cids": [
+    "c0257",
+    "c0259",
+    "c1004",
+    "c1385",
+    "c1436",
+    "c1677",
+    "c1219",
+    "c0625",
+    "c1543",
+    "c0168"
+   ]
+  },
+  {
+   "key": "B-16",
+   "title": "Are agent evals unit tests? Statistical evals versus deterministic assertions",
+   "idea": "Several talks argue agent behaviour is semantic and nondeterministic, so exact-match asserts must give way to repeated statistical evals, traces and judges. Others treat prompt evals as unit tests in the test suite and model changes like dependency changes.",
+   "contested": true,
+   "cids": [
+    "c0792",
+    "c0970",
+    "c1072",
+    "c1877",
+    "c0490",
+    "c1928"
+   ]
+  },
+  {
+   "key": "B-17",
+   "title": "Public leaderboards mislead; select models with evals on your own workload",
+   "idea": "Aggregate leaderboard scores and generic metrics hide regressions and disagree with workload-specific quality. Build evals mirroring your workflow before choosing a model, and expect different winners per scenario.",
+   "contested": false,
+   "cids": [
+    "c0049",
+    "c0316",
+    "c0538",
+    "c1375",
+    "c1467",
+    "c0915",
+    "c0818",
+    "c1538"
+   ]
+  },
+  {
+   "key": "B-18",
+   "title": "Use evals and shadow tests to migrate safely to cheaper or newer models",
+   "idea": "Evals decide which calls can move to smaller or local models and let new frontier models ship quickly. Talks stress A/A baselines, shadow evaluation with paired intervals, production experiments and revisiting harness assumptions per release.",
+   "contested": false,
+   "cids": [
+    "c0378",
+    "c0379",
+    "c1161",
+    "c1942",
+    "c1944",
+    "c0459",
+    "c1829",
+    "c1605"
+   ]
+  },
+  {
+   "key": "B-19",
+   "title": "Skills are software: measure each one with with/without evals",
+   "idea": "Untested skills silently corrupt output; run ablations to measure skill lift, test trigger precision with positive and negative prompts, and rerun tasks after trimming. Evals also tell when a skill can be retired.",
+   "contested": false,
+   "cids": [
+    "c0039",
+    "c0301",
+    "c0302",
+    "c0303",
+    "c0612",
+    "c0683",
+    "c0687",
+    "c0692",
+    "c2005",
+    "c2016",
+    "c0271",
+    "c0249",
+    "c1845"
+   ]
+  },
+  {
+   "key": "B-20",
+   "title": "Automated prompt optimization only works with a trustworthy evaluator and held-out validation",
+   "idea": "GEPA/DSPy-style loops evolve prompts against golden sets and metrics, accepting changes only when validated gains appear. Talks warn that judge quality matters as much as the optimizer and that held-out evals and human review must gate production.",
+   "contested": false,
+   "cids": [
+    "c0574",
+    "c0715",
+    "c0716",
+    "c1512",
+    "c1513",
+    "c1937",
+    "c0682",
+    "c0676",
+    "c0831",
+    "c0576"
+   ]
+  },
+  {
+   "key": "B-21",
+   "title": "Autoresearch loops are only as good as their evaluation contract",
+   "idea": "Autonomous experimentation needs a fixed eval command, scalar metric, budget and fast, low-noise, hack-resistant evaluation; build the evaluator first. Talks differ in domain (kernels, verifiers, agents) and in expert prompt dependence.",
+   "contested": false,
+   "cids": [
+    "c0082",
+    "c0111",
+    "c1172",
+    "c1173",
+    "c1166",
+    "c0329"
+   ]
+  },
+  {
+   "key": "B-22",
+   "title": "LLM judges carry systematic biases; mitigate with pairwise, cross-family or combined checks",
+   "idea": "Judges show position, verbosity, sycophancy and self-family preference and are inconsistent when repeated. Remedies include cross-family judges, pairwise designs, multiple drafts and combining with deterministic verification.",
+   "contested": false,
+   "cids": [
+    "c1423",
+    "c1504",
+    "c1719"
+   ]
+  },
+  {
+   "key": "B-23",
+   "title": "Taste-heavy generative output needs expert preference evals, not metrics or generic judges",
+   "idea": "For images, video and writing, metric scores, human-preference data and generic judges reward slop or attractive-but-wrong output. Talks use expert-curated pairwise preferences, distilled judges and voice-fidelity rubrics, at notable cost.",
+   "contested": false,
+   "cids": [
+    "c0127",
+    "c0307",
+    "c0313",
+    "c0315",
+    "c1830",
+    "c1503",
+    "c1505"
+   ]
+  },
+  {
+   "key": "B-24",
+   "title": "Use narrow, binary, per-dimension evaluators instead of one generic quality judge",
+   "idea": "Separate business-specific evaluators with observable criteria and pass/fail labels beat a generic hallucination or helpfulness judge, and each verdict should link to trace evidence. Talks differ in whether judges are prompt-optimized.",
+   "contested": false,
+   "cids": [
+    "c0488",
+    "c1251",
+    "c1583",
+    "c1446"
+   ]
+  },
+  {
+   "key": "B-25",
+   "title": "Ground judges in the agent's context, not the judge's own knowledge",
+   "idea": "Correctness judges fail on fresh research or personalized output because they grade against their own knowledge; supply sources, user history or retrieved expert corrections and use faithfulness-style evaluation.",
+   "contested": false,
+   "cids": [
+    "c1250",
+    "c2045",
+    "c1576",
+    "c1320"
+   ]
+  },
+  {
+   "key": "B-26",
+   "title": "Start with error analysis: read real traces before writing evaluators",
+   "idea": "Evaluation begins by reading traces and outputs with domain experts to find actual failures, then grows from a small set of dimensions and datasets. Talks frame it as more valuable than model choice.",
+   "contested": false,
+   "cids": [
+    "c1249",
+    "c2044",
+    "c0850",
+    "c0418",
+    "c1445",
+    "c1593"
+   ]
+  },
+  {
+   "key": "B-27",
+   "title": "Cluster production traces to discover failure modes your evals do not yet cover",
+   "idea": "Embedding or topic clustering over traces, sessions or expert comments surfaces recurring failures at scale. Talks note default facets can be too generic and cheaper models can scale the analysis.",
+   "contested": false,
+   "cids": [
+    "c0411",
+    "c0794",
+    "c2012",
+    "c1799",
+    "c0439",
+    "c0476"
+   ]
+  },
+  {
+   "key": "B-28",
+   "title": "Agent-as-a-judge: evaluators that explore full traces with tools",
+   "idea": "Fixed-rubric judges cannot cover diverse agent failures; an agentic evaluator can inspect trace trees, use tools, form hypotheses in parallel and propose fixes. Talks range from harness-as-judge rubrics to automating most eval analysis.",
+   "contested": false,
+   "cids": [
+    "c0778",
+    "c0779",
+    "c1263",
+    "c1591"
+   ]
+  },
+  {
+   "key": "B-29",
+   "title": "Grade the reasoning and evidence path, not just the final answer",
+   "idea": "A correct number or accurate aggregate can rest on wrong reasoning or wrong evidence; evaluate reasoning graphs, investigation paths and workflow behaviour, and audit by swapping assumptions for ground truth.",
+   "contested": false,
+   "cids": [
+    "c0581",
+    "c0618",
+    "c1387",
+    "c2068",
+    "c2069"
+   ]
+  },
+  {
+   "key": "B-30",
+   "title": "Decompose agent pipelines into separately evaluable stages",
+   "idea": "Each architecture layer or reasoning step adds failure surfaces; evaluate extraction, reasoning, retrieval and response stages separately to locate where models differ, rather than only end to end.",
+   "contested": false,
+   "cids": [
+    "c1003",
+    "c1984",
+    "c1647",
+    "c1103",
+    "c0883",
+    "c1602"
+   ]
+  },
+  {
+   "key": "B-31",
+   "title": "Put quality gates inside the generation pipeline with bounded regeneration",
+   "idea": "Check each handoff (faithfulness, drift, style, dedup) as early as possible and regenerate only the failing piece, with rollback, rather than trusting one generation or regenerating everything.",
+   "contested": false,
+   "cids": [
+    "c0197",
+    "c0314",
+    "c0325"
+   ]
+  },
+  {
+   "key": "B-32",
+   "title": "Measure tool and retrieval quality by successful outcomes, not per-call metrics",
+   "idea": "Tokens per call, nDCG or latency per call miss what matters; measure tokens per successful outcome, argument fidelity, call counts and the chain from tool availability to contribution.",
+   "contested": false,
+   "cids": [
+    "c0186",
+    "c1376",
+    "c1069",
+    "c0340",
+    "c2030"
+   ]
+  },
+  {
+   "key": "B-33",
+   "title": "Single aggregate or proxy metrics hide trade-offs; tie metrics to business value",
+   "idea": "Containment rate, cost savings, recall or a flat dashboard score can reward the wrong agent or hide drops. Measure against the right baseline and the real business question, including novel insight rather than time saved.",
+   "contested": false,
+   "cids": [
+    "c1378",
+    "c1379",
+    "c1782",
+    "c2028",
+    "c2031",
+    "c0900",
+    "c1146"
+   ]
+  },
+  {
+   "key": "B-34",
+   "title": "Report cost per correct result alongside accuracy",
+   "idea": "Token consumption, reasoning effort and strategy interact with deadlines and price; compare agents on cost to obtain a fully correct answer, with latency and cost per task.",
+   "contested": false,
+   "cids": [
+    "c0285",
+    "c1223",
+    "c1437",
+    "c0261"
+   ]
+  },
+  {
+   "key": "B-35",
+   "title": "Attribute and govern LLM spend per call, feature and run",
+   "idea": "Tag every call by feature, user, model and endpoint, watch for token creep and silent model switches, reconcile with restated bills, and steer runs with budget policies before halting.",
+   "contested": false,
+   "cids": [
+    "c1187",
+    "c1188",
+    "c1371",
+    "c1372",
+    "c1614",
+    "c1971",
+    "c1088"
+   ]
+  },
+  {
+   "key": "B-36",
+   "title": "Record agent boundaries and state so failures can be replayed deterministically",
+   "idea": "Reruns do not reproduce nondeterministic failures; capture inputs, outputs, artifacts and environment at each boundary to replay a past run with one change and compare cohorts.",
+   "contested": false,
+   "cids": [
+    "c1006",
+    "c1007",
+    "c1008",
+    "c1018",
+    "c1019",
+    "c1979",
+    "c0882"
+   ]
+  },
+  {
+   "key": "B-37",
+   "title": "Keep auditable logs and receipts of what agents did",
+   "idea": "Agent actions should be logged and attributable with durable event logs, execution receipts, idempotency keys, checkpoints and decision logs, so missing or duplicated effects can be detected.",
+   "contested": false,
+   "cids": [
+    "c0993",
+    "c1002",
+    "c1498",
+    "c1655"
+   ]
+  },
+  {
+   "key": "B-38",
+   "title": "In finance, keep computation deterministic and rerunnable; the LLM only reasons",
+   "idea": "Evals alone cannot make nondeterministic output trustworthy for money; separate reasoning from deterministic retrieval and finance-approved calculations, revalidate after any change.",
+   "contested": false,
+   "cids": [
+    "c0437",
+    "c1812",
+    "c1293"
+   ]
+  },
+  {
+   "key": "B-39",
+   "title": "Never accept agent completion claims without independent verification",
+   "idea": "Agents claim work done (searches, measurements) that never happened; require verified artifacts, reconciliation against control totals and cold reviewers before trusting completion reports.",
+   "contested": false,
+   "cids": [
+    "c1016",
+    "c1656",
+    "c1657",
+    "c1658",
+    "c1659"
+   ]
+  },
+  {
+   "key": "B-40",
+   "title": "Bind every claim and number to source evidence",
+   "idea": "Confident fabrications and silent assumptions require citation checks, filters for unmatched numbers and tracing each figure to the evidence it depends on, even when headline numbers look right.",
+   "contested": false,
+   "cids": [
+    "c0435",
+    "c1741",
+    "c1974",
+    "c1771",
+    "c1093",
+    "c1707",
+    "c2077"
+   ]
+  },
+  {
+   "key": "B-41",
+   "title": "Run-to-run or cross-model disagreement targets human review",
+   "idea": "When runs or models disagree, it signals ambiguous labels, missing context or conflicting policy; rank those cases for review. Agreement is not proof of correctness, and clarifying definitions shifts answers.",
+   "contested": false,
+   "cids": [
+    "c0977",
+    "c0978",
+    "c2106",
+    "c2107",
+    "c1104"
+   ]
+  },
+  {
+   "key": "B-42",
+   "title": "Build synthetic worlds with known answers when real data cannot be used",
+   "idea": "Synthetic records, businesses or inputs generated from policy or decision trees give free labels and repeatable end-to-end back-tests; one-shot generation collapses to averages and synthetic data needs its own validation.",
+   "contested": false,
+   "cids": [
+    "c0295",
+    "c0296",
+    "c0297",
+    "c1158",
+    "c1159",
+    "c1772",
+    "c2058",
+    "c1903",
+    "c0575"
+   ]
+  },
+  {
+   "key": "B-43",
+   "title": "Domain experts must define what a good output is",
+   "idea": "Quality bars differ by use case; experts (an Oracle role) define correctness, their rationales become scoring functions, and product, ops and domain teams own specs and success criteria rather than only engineering.",
+   "contested": false,
+   "cids": [
+    "c0319",
+    "c0450",
+    "c0452",
+    "c0793",
+    "c1157",
+    "c1732",
+    "c1066"
+   ]
+  },
+  {
+   "key": "B-44",
+   "title": "Allocate evaluation effort by potential harm, not failure frequency",
+   "idea": "Rigor should scale with stakes: weight metrics toward safety-critical misses, build separate evidence for generative failure modes, and focus on errors that reach decisions.",
+   "contested": false,
+   "cids": [
+    "c1204",
+    "c1205",
+    "c1874",
+    "c0679",
+    "c1577",
+    "c0402"
+   ]
+  },
+  {
+   "key": "B-45",
+   "title": "Long-horizon agent evals expose failures short benchmarks miss",
+   "idea": "Thousand-turn or whole-project tasks reveal coherence and compaction failures; horizon should be defined in model units, not human time. Talks also report emergent misbehaviour and trend projections from such evals.",
+   "contested": false,
+   "cids": [
+    "c0622",
+    "c0623",
+    "c0728",
+    "c0879",
+    "c0880",
+    "c0881",
+    "c1882"
+   ]
+  },
+  {
+   "key": "B-46",
+   "title": "Item response theory gives more informative benchmark scores than accuracy",
+   "idea": "IRT estimates latent ability, separates models with equal accuracy, flags broken items and shrinks eval sets; residuals can even fingerprint model families.",
+   "contested": false,
+   "cids": [
+    "c0718",
+    "c0719",
+    "c0720"
+   ]
+  },
+  {
+   "key": "B-47",
+   "title": "Prediction backtests need holdouts and time-fixed information",
+   "idea": "Models may know outcomes and live search leaks later facts; fix information dates and check generalization on holdouts because hand-built features overfit visible examples.",
+   "contested": false,
+   "cids": [
+    "c1105",
+    "c1733",
+    "c1734",
+    "c1309"
+   ]
+  },
+  {
+   "key": "B-48",
+   "title": "Reliability tracks verifiability: domains mature as fast as tasks can be checked",
+   "idea": "Code became reliable because it is verifiable; most knowledge work and clinical answers are hard to verify, so verification, not capability, is the bottleneck.",
+   "contested": false,
+   "cids": [
+    "c0564",
+    "c0707",
+    "c0353"
+   ]
+  },
+  {
+   "key": "B-49",
+   "title": "Continual-learning evals must measure improvement over stateful task sequences",
+   "idea": "Independent-task benchmarks measure static capability; evaluate learning from experience jointly with base strength and compute cost.",
+   "contested": false,
+   "cids": [
+    "c0146",
+    "c0148"
+   ]
+  },
+  {
+   "key": "B-50",
+   "title": "Test whether models push back on invalid premises",
+   "idea": "Nonsense-premise prompts show frontier models answering confidently; traces show they detect the problem but fail to follow through, and scores do not track general rankings.",
+   "contested": false,
+   "cids": [
+    "c0913",
+    "c0914"
+   ]
+  },
+  {
+   "key": "B-51",
+   "title": "Stress agents with fault injection and build-break-fix testing",
+   "idea": "Nominal success does not imply recoverability; inject faults, run adversarial build-break-fix loops and red-team or mass-run workflows to map risky operating regions.",
+   "contested": false,
+   "cids": [
+    "c1818",
+    "c1206",
+    "c1636",
+    "c0632"
+   ]
+  },
+  {
+   "key": "B-52",
+   "title": "Gate releases and merges on explicit eval thresholds in CI",
+   "idea": "Define launch gates on decision-relevant metrics, run the same checks locally and in CI, test candidates against thresholds and replayed failures before release, and keep dev tests separate from the ship decision.",
+   "contested": false,
+   "cids": [
+    "c1801",
+    "c1725",
+    "c1582",
+    "c2059",
+    "c1264",
+    "c0352",
+    "c2047"
+   ]
+  },
+  {
+   "key": "B-53",
+   "title": "Mine your own repository's real PRs and incidents into coding-agent evals",
+   "idea": "Merged fix PRs and incident-causing PRs become reproducible tasks scored by the repo's tests, giving evidence that generic benchmarks cannot; results from one repo are narrow.",
+   "contested": false,
+   "cids": [
+    "c1365",
+    "c1366",
+    "c1630",
+    "c1995"
+   ]
+  },
+  {
+   "key": "B-54",
+   "title": "Mine implicit user feedback as the eval and improvement signal",
+   "idea": "User edits, settled code, approvals, complaints and qualitative feedback replace manual labeling, but raw logs need a critique attached before they become feedback.",
+   "contested": false,
+   "cids": [
+    "c1464",
+    "c0458",
+    "c0832",
+    "c0272",
+    "c0083"
+   ]
+  },
+  {
+   "key": "B-55",
+   "title": "Trace every model call, tool and retry from day one",
+   "idea": "Without full traces (prompt version, settings, tokens, latency, cost) there is nothing to debug or optimize; make trace views available to every team and trace the coding agents too.",
+   "contested": false,
+   "cids": [
+    "c1945",
+    "c0337",
+    "c0215",
+    "c0266",
+    "c1351",
+    "c0431",
+    "c0819"
+   ]
+  },
+  {
+   "key": "B-56",
+   "title": "Agent traces need purpose-built, searchable, long-retention storage",
+   "idea": "Deep nested traces and agent-driven, read-heavy analysis require SQL and full-text search over unsampled, cheap long-retention storage rather than uptime dashboards.",
+   "contested": false,
+   "cids": [
+    "c0410",
+    "c1323",
+    "c1465"
+   ]
+  },
+  {
+   "key": "B-57",
+   "title": "Track operational and outcome metrics as the ultimate production eval signal",
+   "idea": "Human override rates, reviewer time, kill-switch activations, marketplace outcomes and session dashboards show whether the system really works in production.",
+   "contested": false,
+   "cids": [
+    "c0090",
+    "c0108",
+    "c0198",
+    "c0803"
+   ]
+  },
+  {
+   "key": "B-58",
+   "title": "Eval maturity: move from spreadsheets to a shared, versioned eval platform",
+   "idea": "Ad hoc spreadsheets cannot handle variability; maturity adds repeated runs, versioned comparisons, side-by-side experiments and self-service annotation so non-engineers own quality.",
+   "contested": false,
+   "cids": [
+    "c0948",
+    "c1322",
+    "c2017"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0630",
+  "c0675",
+  "c0837",
+  "c0874",
+  "c0964",
+  "c1033",
+  "c1208",
+  "c1279",
+  "c1457",
+  "c1459",
+  "c1736",
+  "c1798",
+  "c2015",
+  "c0288",
+  "c0492",
+  "c0873",
+  "c1139",
+  "c1145",
+  "c1400",
+  "c1789",
+  "c2051",
+  "c2078"
+ ],
+ "noise": [
+  "c0255",
+  "c0885",
+  "c1545",
+  "c1220"
+ ]
+}

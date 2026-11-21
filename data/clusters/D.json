@@ -1,0 +1,1095 @@
+{
+ "clusters": [
+  {
+   "key": "D-01",
+   "title": "Prompts and model refusals are not security controls; enforce rules deterministically outside the model",
+   "idea": "Instructions, code freezes, system-prompt rules and model refusals get broken or bypassed, so critical rules (paths, payments, deployments, escalation) live in code or infrastructure the agent cannot override. Talks differ on where: app-level code guardrails and output vetoes vs infra admission policies and deterministic scanners, with LLMs only advisory.",
+   "contested": false,
+   "cids": [
+    "c0103",
+    "c1856",
+    "c1904",
+    "c1905",
+    "c2048",
+    "c2049",
+    "c2109",
+    "c1258",
+    "c2011",
+    "c0142",
+    "c0712",
+    "c0725",
+    "c0399"
+   ]
+  },
+  {
+   "key": "D-02",
+   "title": "Bracket the model with deterministic rules so most decisions never reach the LLM",
+   "idea": "Rules, button flows and small classifiers/models handle routine decisions and pre-classification; only ambiguous cases go to the LLM agent. Shrinks the failure surface and cuts cost/latency; some talks use a tiny RL policy restricted to a bounded action set.",
+   "contested": false,
+   "cids": [
+    "c1875",
+    "c0500",
+    "c1896",
+    "c0872"
+   ]
+  },
+  {
+   "key": "D-03",
+   "title": "Keep credentials out of the agent: a vault or proxy injects secrets at call time",
+   "idea": "Anything in the agent's context or sandbox can be exfiltrated, so secrets live in a vault/egress proxy that substitutes placeholders or injects tokens outside the execution environment. Sandboxing execution alone leaves the agent holding keys; some add per-run credential deletion or brief task-bound exposure.",
+   "contested": false,
+   "cids": [
+    "c0121",
+    "c1409",
+    "c1418",
+    "c1547",
+    "c1560",
+    "c1127",
+    "c1692",
+    "c1649",
+    "c0923",
+    "c1350"
+   ]
+  },
+  {
+   "key": "D-04",
+   "title": "Replace static API keys with token exchange minting short-lived, per-call scoped credentials",
+   "idea": "Standing broad keys let incident/triage agents drop databases or leak PII; instead use OAuth token exchange (STS, RFC 8693) or a deterministic broker to issue audience-restricted, short-lived credentials per tool call after policy checks. Remote MCP should use OAuth with scoped validation rather than long-lived credentials.",
+   "contested": false,
+   "cids": [
+    "c0485",
+    "c0486",
+    "c1806",
+    "c1807",
+    "c2067",
+    "c1037",
+    "c0650",
+    "c1813"
+   ]
+  },
+  {
+   "key": "D-05",
+   "title": "Agents need their own identity separate from the user's, or do they?",
+   "idea": "Most talks argue agents should get distinct identities with explicit delegation, intersected permissions and independent revocation so downstream services see the agent. Others run agents under the employee's identity with attribution headers, or argue agent identity accrues on existing human surfaces (email inboxes) and that scoped-identity specs miss adoption.",
+   "contested": true,
+   "cids": [
+    "c0380",
+    "c1126",
+    "c0992",
+    "c1722",
+    "c1669",
+    "c1670",
+    "c1074",
+    "c1075",
+    "c1076",
+    "c1914"
+   ]
+  },
+  {
+   "key": "D-06",
+   "title": "Authorize per task or mission, granting capabilities just in time instead of upfront",
+   "idea": "Broad standing scopes are too coarse for agents whose needs change mid-task; tie authorization to a task or mission, request tools progressively (JIT MCP), disclose capabilities per sandbox/task, and make the effective grant the intersection of task and user authority.",
+   "contested": false,
+   "cids": [
+    "c0864",
+    "c1651",
+    "c1831",
+    "c1808",
+    "c1777",
+    "c0381"
+   ]
+  },
+  {
+   "key": "D-07",
+   "title": "Route MCP authorization through the enterprise identity provider (Cross-App Access)",
+   "idea": "Per-server OAuth consent screens bypass SSO and hide agent access from IT; route grants through the IdP with identity assertions and scoped token exchange so admins govern and revoke which agents reach which apps.",
+   "contested": false,
+   "cids": [
+    "c0550",
+    "c0551"
+   ]
+  },
+  {
+   "key": "D-08",
+   "title": "Keep an agent registry of owners and declared scopes; derive runtime policy from it",
+   "idea": "Each delegated agent needs an owner, scope and off switch; declare tools, endpoints and permissions as configuration (registry or YAML) and generate enforceable runtime policy from it rather than prompt-level policy documents.",
+   "contested": false,
+   "cids": [
+    "c1927",
+    "c0483",
+    "c0596"
+   ]
+  },
+  {
+   "key": "D-09",
+   "title": "Constrain the tool interface so dangerous actions cannot even be expressed",
+   "idea": "Expose few, narrow, parameterized tools; inject identity/tenant parameters server-side; bind file tools to a fixed directory; validate generated queries with deny-by-default allowlists; serve read-only views with permitted fields. Smaller interfaces are both easier for models and a smaller attack surface.",
+   "contested": false,
+   "cids": [
+    "c1271",
+    "c1035",
+    "c1642",
+    "c0921",
+    "c1272",
+    "c1643",
+    "c1294"
+   ]
+  },
+  {
+   "key": "D-10",
+   "title": "Break the lethal trifecta: never let untrusted input, private data and external actions coexist",
+   "idea": "An agent with private-data access, untrusted content and an outbound channel is exploitable; remove a leg architecturally (separate sandboxes per task) or require human sign-off when all three are present. Review tool combinations, since individually safe tools compose into exfiltration paths.",
+   "contested": false,
+   "cids": [
+    "c1853",
+    "c1814",
+    "c1648",
+    "c0908"
+   ]
+  },
+  {
+   "key": "D-11",
+   "title": "Separate trusted planning from untrusted execution, verifying the plan before it runs",
+   "idea": "Because prompt injection makes model guardrails unenforceable, the LLM emits a plan (code/AST) in an isolated context and only plans satisfying checkable properties (no exfiltration, human-in-the-loop) execute; some propose formal proofs (Lean, Dafny), others capability policy outside the model.",
+   "contested": false,
+   "cids": [
+    "c0472",
+    "c0473",
+    "c0484"
+   ]
+  },
+  {
+   "key": "D-12",
+   "title": "Enforce policy on the wire: an egress firewall/proxy outside the agent inspects traffic",
+   "idea": "The guard cannot live inside the agent; subprocesses bypass MCP-level controls and sandboxes still leak via network (even DNS). Inspect protocol traffic at an egress proxy, block destructive operations, mediate auth and dynamically remove dangerous tool combinations.",
+   "contested": false,
+   "cids": [
+    "c0662",
+    "c0663",
+    "c0664",
+    "c1562",
+    "c1815",
+    "c1832",
+    "c1854",
+    "c0863"
+   ]
+  },
+  {
+   "key": "D-13",
+   "title": "Route all tool access through an MCP gateway as the single enforcement and audit point",
+   "idea": "A gateway per sandbox or enterprise authenticates requests, enforces identity-based policy, curates tool subsets, centralizes logs and inventories permissions; it also makes the harness swappable. One talk weighs gateways (latency, bypass, concentrated risk) against SDK enforcement (adoption, language coverage).",
+   "contested": false,
+   "cids": [
+    "c0387",
+    "c1650",
+    "c1653",
+    "c2095",
+    "c2097",
+    "c0237",
+    "c1611",
+    "c1128"
+   ]
+  },
+  {
+   "key": "D-14",
+   "title": "Route all model traffic through a central AI gateway for identity, budgets, audit and resilience",
+   "idea": "A model gateway gives workload identity, PII redaction, per-team budgets, auditing, semantic caching and provider failover so teams don't build their own security models and agents never hold provider keys. A dissent: centralized governance need not mean a single gateway deployment; guardrail failures need explicit fail-open/closed policy.",
+   "contested": true,
+   "cids": [
+    "c0073",
+    "c0552",
+    "c1087",
+    "c0924",
+    "c1160",
+    "c1203",
+    "c2003",
+    "c2096",
+    "c2002"
+   ]
+  },
+  {
+   "key": "D-15",
+   "title": "Screen untrusted inputs at every boundary with dedicated guard classifiers before the agent sees them",
+   "idea": "LLMs cannot separate instructions from data, so classify prompts, retrieved content, tool responses and skills at ingestion with dedicated (often small, fine-tuned) models such as ModernBERT or LoRA guards that are cheaper and faster than an LLM judge, plus output guardrails.",
+   "contested": false,
+   "cids": [
+    "c0047",
+    "c0666",
+    "c0909",
+    "c0046",
+    "c1906",
+    "c1613",
+    "c1561",
+    "c0318"
+   ]
+  },
+  {
+   "key": "D-16",
+   "title": "Judge each proposed action in session context with a classifier, not static allowlists",
+   "idea": "Static tool blocking misses gradual drift; a separate safety classifier evaluates each tool call against session intent and risk, gating irreversible actions and escalating with graduated recourse. Positioned as an alternative to widening allow rules or skipping prompts.",
+   "contested": false,
+   "cids": [
+    "c1612",
+    "c0865",
+    "c1871",
+    "c1778",
+    "c0367"
+   ]
+  },
+  {
+   "key": "D-17",
+   "title": "Inspect model internals (activations, KV cache) to catch what text filters and evals miss",
+   "idea": "Behavioral evals and prompt classifiers cannot see backdoors firing on untested cues or injections hidden in audio; diff-based sparse autoencoders on activations and learned baselines over KV pages give computation-level signals without per-attack classifiers.",
+   "contested": false,
+   "cids": [
+    "c1038",
+    "c1039",
+    "c1040",
+    "c2018",
+    "c2019"
+   ]
+  },
+  {
+   "key": "D-18",
+   "title": "Gate only consequential or irreversible actions with humans, and beware rubber-stamp approval",
+   "idea": "Teams mostly control agents via approvals; reserve them for actions that cannot be undone or carry high cost, using runtime rules rather than context instructions (lost to compaction). Talks diverge on approval's strength: approvers sharing the system's expectation rubber-stamp, and agents route around human verification steps.",
+   "contested": true,
+   "cids": [
+    "c1259",
+    "c1680",
+    "c0211",
+    "c0750",
+    "c1929",
+    "c1926",
+    "c1420",
+    "c0269",
+    "c0104"
+   ]
+  },
+  {
+   "key": "D-19",
+   "title": "Bind human approval to the exact action and payload, provable later",
+   "idea": "Approvals should cover the specific action and arguments (and the plan), not grant blanket permission; uncertain outcomes go to manual review, and high-stakes transactions use signed mandates so authorization is durable evidence.",
+   "contested": false,
+   "cids": [
+    "c1001",
+    "c1700",
+    "c1756",
+    "c1757"
+   ]
+  },
+  {
+   "key": "D-20",
+   "title": "Agents draft into reviewable artifacts; humans keep authority over what is accepted",
+   "idea": "Keep agents read-only on source data and writing to isolated review workspaces or inspectable artifacts; reviewed rows and human flags must not be overwritten by re-runs, and assurance requires bounded authorization, preserved execution and evidence provenance.",
+   "contested": false,
+   "cids": [
+    "c0246",
+    "c0620",
+    "c1975",
+    "c1976"
+   ]
+  },
+  {
+   "key": "D-21",
+   "title": "Grant agents autonomy incrementally as they earn trust",
+   "idea": "Start with narrow access (including isolated funds) and widen it step by step based on track record rather than granting full access at once.",
+   "contested": false,
+   "cids": [
+    "c0468",
+    "c1081"
+   ]
+  },
+  {
+   "key": "D-22",
+   "title": "Agent payments: scoped spend-limited tokens and keys kept outside the agent loop",
+   "idea": "Let the agent discover nondeterministically but run credentials, checkout and payment deterministically with tokens constrained by merchant, amount, currency and expiry, wallet spend limits and screening before spend; verify merchant domains against lookalikes.",
+   "contested": false,
+   "cids": [
+    "c0208",
+    "c0210",
+    "c1675",
+    "c2084",
+    "c1838"
+   ]
+  },
+  {
+   "key": "D-23",
+   "title": "Make sign-up and API access agent-native via a discoverable auth.md",
+   "idea": "Human signup flows (forms, CAPTCHA, manual keys) break agent workflows; publish an auth.md declaring registration, scopes and limits, let anonymous agents try limited actions, then have the user claim the work to issue a delegated token. The app, not the file, enforces authorization.",
+   "contested": false,
+   "cids": [
+    "c1720",
+    "c1721",
+    "c1839"
+   ]
+  },
+  {
+   "key": "D-24",
+   "title": "Match isolation strength to threat: containers share a kernel; pick VMs or isolates",
+   "idea": "Reason about sandboxing from first principles (syscalls, namespaces, privilege boundaries); containers don't stop escapes, so VM-level isolation with a minimal VMM is often needed, while V8 isolates suit small snippets. Compare options on locality, scale, persistence and triggers.",
+   "contested": false,
+   "cids": [
+    "c0361",
+    "c1343",
+    "c1344",
+    "c0946"
+   ]
+  },
+  {
+   "key": "D-25",
+   "title": "Run agents in isolated environments with scoped access, not on laptops holding everything",
+   "idea": "An unsandboxed local agent reaches files, persistent tokens and production credentials; supply-chain attacks already scan dev machines for secrets. Use isolated cloud environments with deliberately scoped data, credentials and network, treat production-credentialed agents as supply-chain actors, and audit routes to production.",
+   "contested": false,
+   "cids": [
+    "c1342",
+    "c1855",
+    "c1858",
+    "c1859",
+    "c1899",
+    "c1857",
+    "c0901"
+   ]
+  },
+  {
+   "key": "D-26",
+   "title": "Treat generated code as untrusted: sandbox it with explicit capability bindings, no ambient authority",
+   "idea": "LLM code is untrusted input; run it in restricted runtimes (isolates, Workers) where it receives only typed bindings to specific APIs, giving a permission model and observability bash lacks. Talks note costs: egress, secret handling, startup failures, double sandboxing.",
+   "contested": false,
+   "cids": [
+    "c0240",
+    "c0947",
+    "c0385",
+    "c0386",
+    "c0945",
+    "c0953",
+    "c1529"
+   ]
+  },
+  {
+   "key": "D-27",
+   "title": "Render untrusted generated UI in origin-isolated sandbox iframes; never relax host CSP",
+   "idea": "Generated or third-party UI runs in null-origin or separate-origin sandbox iframes talking via postMessage RPC; srcdoc iframes inherit parent CSP, so relaxing CSP or injecting nonces to make apps work opens real holes.",
+   "contested": false,
+   "cids": [
+    "c0384",
+    "c0957",
+    "c0958"
+   ]
+  },
+  {
+   "key": "D-28",
+   "title": "Skills and plugins are executable supply chain: admit with review and re-vet after updates",
+   "idea": "Skills, plugins, MCP servers and agent rules look like config but behave like code; scanning found credential echoing and remote config fetches. Govern registries with human-reviewed admission, deterministic plus LLM checks surfaced in PRs, PII/injection screening before publishing, and re-vetting for drift.",
+   "contested": false,
+   "cids": [
+    "c0690",
+    "c0844",
+    "c0904",
+    "c0905",
+    "c0906",
+    "c2034",
+    "c0069"
+   ]
+  },
+  {
+   "key": "D-29",
+   "title": "Static skill review cannot predict behavior; detonate skills in a sandbox with realistic tasks",
+   "idea": "Malicious behavior often appears only when the agent does work that exercises it, so run the skill against a plausible task in a sandbox and trace effects through child processes to files and services.",
+   "contested": false,
+   "cids": [
+    "c1288",
+    "c1289"
+   ]
+  },
+  {
+   "key": "D-30",
+   "title": "MCP security is two problems: poisoned tool descriptions and vulnerable server code",
+   "idea": "Tool descriptions are a prompt-injection channel (a weather tool steering a config read), and servers have ordinary flaws like shell injection; scan for both and avoid leaking context through outputs, wiring scans into a fix loop.",
+   "contested": false,
+   "cids": [
+    "c2111",
+    "c1036",
+    "c2050",
+    "c1296"
+   ]
+  },
+  {
+   "key": "D-31",
+   "title": "Verify dependencies: models hallucinate package names that attackers register (slopsquatting)",
+   "idea": "Attackers publish backdoored packages under names models invent, so check dependency provenance before installing.",
+   "contested": false,
+   "cids": [
+    "c0079",
+    "c1297"
+   ]
+  },
+  {
+   "key": "D-32",
+   "title": "Harden the software supply chain: cooldowns, signing, provenance and side doors",
+   "idea": "Compromises propagate through shared dependencies and tooling (CI/CD, workstations, agent tooling, malicious MCP packages after clean releases); defenses include package cooldowns, Sigstore/SLSA provenance and security keys.",
+   "contested": false,
+   "cids": [
+    "c1063",
+    "c1064",
+    "c1816"
+   ]
+  },
+  {
+   "key": "D-33",
+   "title": "AI-accelerated offense forces faster remediation and eliminating whole vulnerability classes",
+   "idea": "Cyber capability doubles every few months and attackers can target many systems cheaply, so 30/60/90-day backlogs are too slow; set day-scale SLAs and remove classes by design (memory safety) rather than hunting bugs.",
+   "contested": false,
+   "cids": [
+    "c0870",
+    "c0855",
+    "c1062",
+    "c0756"
+   ]
+  },
+  {
+   "key": "D-34",
+   "title": "Track shadow AI with a continuous AI bill of materials",
+   "idea": "Inventory models, datasets, agents, MCP servers and skills so disclosed component risks map to affected apps, enforce policies against prohibited components and offer approved alternatives.",
+   "contested": false,
+   "cids": [
+    "c1295",
+    "c2110",
+    "c0845"
+   ]
+  },
+  {
+   "key": "D-35",
+   "title": "AI vulnerability findings must be proven exploitable before they reach humans",
+   "idea": "Engineer attention is the bottleneck and AI-generated advisories flood maintainers, so pipelines (threat model, sandbox, discovery, verification, triage, patch) reproduce exploits, use adversarial validation and feed patch outcomes back. Agents also catch logic flaws pattern scanners miss and test whether version bumps really fix vulns.",
+   "contested": false,
+   "cids": [
+    "c0032",
+    "c0868",
+    "c0869",
+    "c0871",
+    "c1924",
+    "c1686",
+    "c1956"
+   ]
+  },
+  {
+   "key": "D-36",
+   "title": "Wire security scanning into the coding agent loop before the PR (scan, fix, rescan)",
+   "idea": "Agents write insecure code, so surface scanner findings directly to the agent, give context before generation and analyze edits after, route findings into existing quality gates and combine static, runtime and human methods. Hooks alone are bypassable.",
+   "contested": false,
+   "cids": [
+    "c0080",
+    "c1352",
+    "c0757",
+    "c1957",
+    "c1925",
+    "c1353"
+   ]
+  },
+  {
+   "key": "D-37",
+   "title": "Grade security agents with the program as oracle, not an LLM judge",
+   "idea": "For security RL and benchmarks, use deterministic outcomes (crash, exploit success, access-control checks); reward hacking is a major risk and novel vulns lack ground truth. Broken access control needs whole-system reasoning.",
+   "contested": false,
+   "cids": [
+    "c0739",
+    "c0741",
+    "c0853",
+    "c0854"
+   ]
+  },
+  {
+   "key": "D-38",
+   "title": "Shared multi-user agents must scope data per participant to prevent cross-user leaks",
+   "idea": "Org-wide or group agents need shared context but strict isolation between channels, users and roles; check access against the requesting user's permissions (injecting their credentials), with per-file scopes so one user's agent can't surface others' data.",
+   "contested": false,
+   "cids": [
+    "c0890",
+    "c0907",
+    "c1083",
+    "c1084"
+   ]
+  },
+  {
+   "key": "D-39",
+   "title": "Redact sensitive data before any model sees it; downstream redaction is too late",
+   "idea": "Remove PHI/PII at ingestion or in the data/MCP layer; UI redaction fails when a judge's persisted reasoning reproduces PII, agents with raw-file access read before redaction, and agents place PII into analytics, so scan outputs too.",
+   "contested": false,
+   "cids": [
+    "c0400",
+    "c2062",
+    "c1688",
+    "c1045",
+    "c1907"
+   ]
+  },
+  {
+   "key": "D-40",
+   "title": "Make privacy claims verifiable with attestation and transparency logs",
+   "idea": "Publish builds to a transparency log, embed enclave attestation in TLS certificates and keep data encrypted with device-managed keys and in-house inference so users can verify what code touches their data.",
+   "contested": false,
+   "cids": [
+    "c0578",
+    "c0579",
+    "c0580"
+   ]
+  },
+  {
+   "key": "D-41",
+   "title": "Red-team agent policies continuously against adversarial input variations",
+   "idea": "Attack surface grows with capability; test constraints against jailbreaks and input variations continuously (borrowing from robustness testing), not once before launch.",
+   "contested": false,
+   "cids": [
+    "c0703",
+    "c1057"
+   ]
+  },
+  {
+   "key": "D-42",
+   "title": "Secure ML infrastructure with classic hygiene; misconfiguration is the dominant failure",
+   "idea": "ShadowRay-style exposures come from defaults like auth off, not missing features; apply least privilege, short-lived creds, isolation, segmentation and weight protection while teams still apply perimeter playbooks to a changed (probabilistic, multi-tenant) stack.",
+   "contested": false,
+   "cids": [
+    "c1041",
+    "c1042",
+    "c1043"
+   ]
+  },
+  {
+   "key": "D-43",
+   "title": "Multi-tenant GPU partitions leak workload information through timing side channels",
+   "idea": "On H100 MIG and NVLink, memory-barrier timing reveals token cadence, workload type and model identity; mitigate via tenant placement and monitoring for probe-like kernel patterns.",
+   "contested": false,
+   "cids": [
+    "c1762",
+    "c1763",
+    "c1764"
+   ]
+  },
+  {
+   "key": "D-44",
+   "title": "Decouple the agent brain from its sandbox; an append-only session log is the agent",
+   "idea": "Keep a stateless harness reading a durable event log, with sandboxes as replaceable containers, so either can crash and any worker resumes; one owner orders state mutations. Whoever controls the log holds the deepest lock-in, and local JSONL/SQLite is fragile.",
+   "contested": false,
+   "cids": [
+    "c0120",
+    "c0232",
+    "c0789",
+    "c0791",
+    "c1112",
+    "c0999",
+    "c1569",
+    "c1883",
+    "c1164"
+   ]
+  },
+  {
+   "key": "D-45",
+   "title": "Durable execution: journal steps and replay so long-running agents survive failures",
+   "idea": "Most production agents run unattended, so anchor on durable, resumable primitives (Temporal-style) with durable waits for approvals and cancellation, keeping frameworks swappable; replay is not exactly-once, so external effects need idempotency.",
+   "contested": false,
+   "cids": [
+    "c1052",
+    "c1202",
+    "c1369",
+    "c1370",
+    "c0997",
+    "c1770",
+    "c0777"
+   ]
+  },
+  {
+   "key": "D-46",
+   "title": "Snapshot sandboxes to pause, resume, fork and start fast",
+   "idea": "Persistent disks and memory snapshots let long-running work pause and fork and fleets boot from snapshots; map returning users to their sandbox, shrink idle lifetimes, inventory restored processes, and start inference before the sandbox is ready.",
+   "contested": false,
+   "cids": [
+    "c0362",
+    "c0363",
+    "c1106",
+    "c1107",
+    "c1410"
+   ]
+  },
+  {
+   "key": "D-47",
+   "title": "Bound agent runs with deadlines, retry limits, rate limits and budgets",
+   "idea": "Without deadlines and cancellation tool calls stall silently; bounded retries prevent amplification and runaway GPU cost; per-step timeouts, rate limits and execution locks stop duplicate work, and resource budgets keep agents from getting users banned.",
+   "contested": false,
+   "cids": [
+    "c1000",
+    "c0200",
+    "c1983",
+    "c1833"
+   ]
+  },
+  {
+   "key": "D-48",
+   "title": "Infrastructure sized for human rates breaks under agent traffic",
+   "idea": "Agents call APIs and commit code far faster than people and can't ask another team for help: per-request writes spike databases, CI/review queues bottleneck, and most page views now come from agents, so design rate patterns and self-service for agent speed.",
+   "contested": false,
+   "cids": [
+    "c0991",
+    "c0223",
+    "c0571",
+    "c0810"
+   ]
+  },
+  {
+   "key": "D-49",
+   "title": "Prefill and decode have different bottlenecks; split them by hardware, but gains are workload-dependent",
+   "idea": "Prefill is compute-bound and decode memory-bandwidth-bound, so compute the memory equation, let workload shape drive deployment and consider disaggregated pools on different hardware. Others report disaggregation helps only under specific workload/network conditions and needs tuning.",
+   "contested": true,
+   "cids": [
+    "c1484",
+    "c1705",
+    "c1788",
+    "c0656",
+    "c1307",
+    "c1136",
+    "c1706",
+    "c0336",
+    "c1155"
+   ]
+  },
+  {
+   "key": "D-50",
+   "title": "Engine internals decide utilization: batching, paged KV, chunked prefill, CUDA graphs, scheduler",
+   "idea": "Decode keeps up via continuous batching, paged KV allocation, prefix reuse and chunked prefill; CUDA graphs cut launch overhead, and the CPU scheduler can bottleneck the GPU despite doing little compute.",
+   "contested": false,
+   "cids": [
+    "c1704",
+    "c1787",
+    "c1790"
+   ]
+  },
+  {
+   "key": "D-51",
+   "title": "Route requests to replicas holding the prefix KV cache",
+   "idea": "Agentic traces resend large cached prefixes each turn, so KV-locality-aware routing (and avoiding model switches that discard caches) cuts latency and cost; spill caches across VRAM, RAM and NVMe. Routing policy matured from reactive engine signals to explicit predictable policy.",
+   "contested": false,
+   "cids": [
+    "c0828",
+    "c0910",
+    "c1135",
+    "c1713",
+    "c2083"
+   ]
+  },
+  {
+   "key": "D-52",
+   "title": "Prompt cache hit rate is the main lever on agent token cost: keep prefixes stable",
+   "idea": "Agents resend growing context every turn, so caching is worth ~10x; keep prompt prefixes stable, optimize caching first, then compress instructions, and downsize models last; add budgets and bounded loops for spend control.",
+   "contested": false,
+   "cids": [
+    "c0894",
+    "c1544",
+    "c1943",
+    "c1405"
+   ]
+  },
+  {
+   "key": "D-53",
+   "title": "Benchmark the serving stack on your own realistic workload, not defaults or vendor numbers",
+   "idea": "Synthetic benchmarks (random prompts, ignore-eos) and provider claims don't predict production; define concurrency, context and KV needs, isolate runs, change one parameter at a time, check quality alongside speed, and evaluate providers and engines on your own traffic.",
+   "contested": false,
+   "cids": [
+    "c0641",
+    "c1403",
+    "c1499",
+    "c1485",
+    "c1712",
+    "c1330",
+    "c1500",
+    "c1516"
+   ]
+  },
+  {
+   "key": "D-54",
+   "title": "Optimize goodput under latency SLOs and find the concurrency knee, not raw throughput",
+   "idea": "Measure the fraction of requests answered within P99/deadline targets; higher concurrency raises aggregate throughput but worsens TTFT, so tune to the knee, use admission control instead of unbounded queues, and judge speed on whole-job elapsed time.",
+   "contested": false,
+   "cids": [
+    "c1195",
+    "c2099",
+    "c1333",
+    "c1468",
+    "c2098",
+    "c1466"
+   ]
+  },
+  {
+   "key": "D-55",
+   "title": "Speculative decoding helps only with compatible drafters, high acceptance and small batches",
+   "idea": "Gains appear with spare VRAM, small batches and predictable output; a mismatched drafter can cut speed 3x, high temperature erodes acceptance, and it speeds decode not prefill. Check acceptance rate and draft memory cost before enabling.",
+   "contested": false,
+   "cids": [
+    "c1332",
+    "c1784",
+    "c1785",
+    "c1786"
+   ]
+  },
+  {
+   "key": "D-56",
+   "title": "Quantize non-uniformly or with QAT, and benchmark the compressed model yourself",
+   "idea": "Mixed-precision that keeps sensitive layers higher preserves quality better than uniform low-bit; quantization-aware training beats post-training at low precision. FP8 raises throughput but published scores are for the original model.",
+   "contested": false,
+   "cids": [
+    "c0253",
+    "c0704",
+    "c0996",
+    "c1755",
+    "c1331"
+   ]
+  },
+  {
+   "key": "D-57",
+   "title": "Stack quantization, caching and step distillation to make diffusion near real-time",
+   "idea": "Diffusion image/video generation becomes real-time by combining quantization, chunk-level caching of unchanged regions and step distillation rather than 20-50 denoising steps.",
+   "contested": false,
+   "cids": [
+    "c0994",
+    "c0995",
+    "c0395"
+   ]
+  },
+  {
+   "key": "D-58",
+   "title": "Cost per token is set by operator capability: compare by usable output per dollar",
+   "idea": "The same GPUs give very different output depending on the serving stack, so compare producers by total spend over quality-constrained output, not rental price; per-token price drops can still raise bills when upgrades emit more tokens.",
+   "contested": false,
+   "cids": [
+    "c1595",
+    "c1596",
+    "c1597",
+    "c0542"
+   ]
+  },
+  {
+   "key": "D-59",
+   "title": "Self-hosting open-weight models cuts cost sharply at volume, but brings an ops burden",
+   "idea": "Self-hosted serving and small embedding/rerank models report ~10-50x lower cost at comparable quality, keeping data in-house with frontier models as exceptions. The counterweight: self-hosting pulls in Kubernetes, GPU capacity, monitoring and audit work teams never budgeted.",
+   "contested": true,
+   "cids": [
+    "c1515",
+    "c1517",
+    "c1228",
+    "c0701",
+    "c1714",
+    "c0912"
+   ]
+  },
+  {
+   "key": "D-60",
+   "title": "Use dedicated capacity for steady load and metered/serverless for spikes and prototyping",
+   "idea": "Rent metered inference while validating demand and for bursty traffic; move to reserved or owned capacity when cost predictability and rate-limit autonomy matter.",
+   "contested": false,
+   "cids": [
+    "c1156",
+    "c1477",
+    "c0723"
+   ]
+  },
+  {
+   "key": "D-61",
+   "title": "Match the model to the task with routing, and validate every substitution",
+   "idea": "Don't default to the frontier model: compressed specialized or small models handle narrow tasks; route per request on task, cost and latency (even with a fast classifier), measure spend per use case, and check substitutions don't silently degrade quality.",
+   "contested": false,
+   "cids": [
+    "c0544",
+    "c1797",
+    "c1758",
+    "c1998",
+    "c1474",
+    "c0709",
+    "c0050"
+   ]
+  },
+  {
+   "key": "D-62",
+   "title": "Choose the production model on the accuracy versus latency tradeoff",
+   "idea": "The most accurate model or largest prompt is often too slow for interactive use; trade accuracy against latency explicitly.",
+   "contested": false,
+   "cids": [
+    "c0184",
+    "c0577"
+   ]
+  },
+  {
+   "key": "D-63",
+   "title": "Keep model-provider optionality to avoid lock-in, even at some cost",
+   "idea": "Model-agnostic frameworks and deployable behavior files let teams swap providers and use open weights where task complexity allows, accepting higher per-message cost.",
+   "contested": false,
+   "cids": [
+    "c0543",
+    "c1034"
+   ]
+  },
+  {
+   "key": "D-64",
+   "title": "Capable models increasingly run on local desk hardware, bounded by memory bandwidth",
+   "idea": "Local inference is judged per phase (prefill compute vs decode bandwidth); quantized open models approach frontier quality on home hardware and capability per parameter keeps rising.",
+   "contested": false,
+   "cids": [
+    "c0376",
+    "c0377",
+    "c0558",
+    "c0642",
+    "c0763"
+   ]
+  },
+  {
+   "key": "D-65",
+   "title": "Sparse and local attention cut long-context KV cost",
+   "idea": "Long-horizon agents stress the KV cache; interleaved sliding-window/global attention with GQA and learned block-sparse attention (MSA) cut prefill/decode cost at very long contexts, co-designed with kernels.",
+   "contested": false,
+   "cids": [
+    "c1058",
+    "c1059",
+    "c0391",
+    "c0081"
+   ]
+  },
+  {
+   "key": "D-66",
+   "title": "Long-sequence training is activation-memory bound: profile, then stack parallelism and offloading",
+   "idea": "Profile memory timelines first, then combine FSDP, context parallelism, activation offloading and head-group processing (UPipe) to reach multi-million-token training.",
+   "contested": false,
+   "cids": [
+    "c0635",
+    "c0636",
+    "c0637"
+   ]
+  },
+  {
+   "key": "D-67",
+   "title": "Run models on-device for privacy, latency and offline use",
+   "idea": "On-device LLMs and voice/vision pipelines (MLX, LiteRT-LM, Transformers.js) keep data local, work offline, avoid per-call cost and fit tight frame budgets for adaptive experiences.",
+   "contested": false,
+   "cids": [
+    "c0846",
+    "c0959",
+    "c1754",
+    "c0510",
+    "c0640"
+   ]
+  },
+  {
+   "key": "D-68",
+   "title": "System-shared on-device model vs bundling your own: managed vs controllable",
+   "idea": "A system model shared via AICore avoids downloads and memory duplication, while shipping your own via LiteRT gives custom models at maintenance cost.",
+   "contested": false,
+   "cids": [
+    "c0348",
+    "c0389"
+   ]
+  },
+  {
+   "key": "D-69",
+   "title": "Edge models are memory-bound: architecture and embedding placement matter more than compute",
+   "idea": "DRAM cost and availability constrain on-device inference; small architectures, per-layer embeddings kept in flash and heavy quantization fit models into tight memory and latency budgets.",
+   "contested": false,
+   "cids": [
+    "c0326",
+    "c0390",
+    "c0394",
+    "c0954"
+   ]
+  },
+  {
+   "key": "D-70",
+   "title": "Keep the edge device thin; do heavy work and output shaping server-side",
+   "idea": "Run cheap hackable devices with cloud inference, and shape output (strip markdown, cap length, paginate) in the backend so firmware only renders fixed buffers.",
+   "contested": false,
+   "cids": [
+    "c1178",
+    "c0557"
+   ]
+  },
+  {
+   "key": "D-71",
+   "title": "Let models reach long context through a Python REPL instead of the context window",
+   "idea": "Small models or recursive LMs that inspect long context via code tools sidestep context limits and run cheaper and faster.",
+   "contested": false,
+   "cids": [
+    "c0328",
+    "c0654"
+   ]
+  },
+  {
+   "key": "D-72",
+   "title": "GPU utilization numbers mislead; profile the real bottleneck at each scale",
+   "idea": "Utilization % hides data-loading starvation, networking and throttling; async fetching, object references and prefetch fixed GPU starvation, and bottlenecks shift (e.g., NIC saturation) as scale grows, so re-profile each stage.",
+   "contested": false,
+   "cids": [
+    "c0479",
+    "c1959",
+    "c1960",
+    "c1961"
+   ]
+  },
+  {
+   "key": "D-73",
+   "title": "Decouple RL rollouts from the trainer to use pooled and scattered GPU capacity",
+   "idea": "Keep the RDMA trainer central and run rollouts as geo-distributed, mixed-GPU islands or pooled infrastructure so idle GPUs don't dominate RL cost.",
+   "contested": false,
+   "cids": [
+    "c0256",
+    "c0734",
+    "c1255"
+   ]
+  },
+  {
+   "key": "D-74",
+   "title": "Agent-driven kernel autoresearch works when seeded with human ideas; multi-GPU comms remain hard",
+   "idea": "A propose-check-benchmark-keep loop yields real speedups when given optimization ideas and hardware context; LLMs struggle with communication ordering and scheduling in multi-GPU kernels, where gains plateau, and lightweight primitives help.",
+   "contested": false,
+   "cids": [
+    "c1165",
+    "c1167",
+    "c1615",
+    "c1616",
+    "c1617"
+   ]
+  },
+  {
+   "key": "D-75",
+   "title": "Agent coordination traffic needs low-tail-latency transport, not TCP/RDMA",
+   "idea": "Agentic workloads shift to small coordination exchanges where tail latency stalls GPUs; Homa's receiver-driven, SRPT design cuts short-message P99 sharply versus TCP.",
+   "contested": false,
+   "cids": [
+    "c1634",
+    "c1635"
+   ]
+  },
+  {
+   "key": "D-76",
+   "title": "GPU capacity markets are opaque and credit-constrained; standardize and make them liquid",
+   "idea": "Long take-or-pay contracts finance clusters but trap capacity and exclude startups as credit requirements spread; quotes are hard to compare, so RFQs, forward contracts and resale markets (backed by real clusters) are proposed.",
+   "contested": false,
+   "cids": [
+    "c1932",
+    "c1933",
+    "c1934",
+    "c2042",
+    "c2043",
+    "c2080"
+   ]
+  },
+  {
+   "key": "D-77",
+   "title": "Bill AI usage with reserve-and-settle: hold funds before inference, reconcile asynchronously",
+   "idea": "Check entitlements and place holds synchronously, settle idempotently afterward with audit trails, re-check balances during long runs with multi-level caps, and keep the ledger in your VPC.",
+   "contested": false,
+   "cids": [
+    "c1962",
+    "c1963",
+    "c1964"
+   ]
+  },
+  {
+   "key": "D-78",
+   "title": "Object-storage-native search with cached hot data fits AI economics",
+   "idea": "Write to object storage, index in the background and cache the queried slice on SSD/memory, minimizing round trips, rather than keeping whole corpora in memory.",
+   "contested": false,
+   "cids": [
+    "c0206",
+    "c1775",
+    "c1887"
+   ]
+  },
+  {
+   "key": "D-79",
+   "title": "Move LLM cost offline: distill or precompute, serve cheap models online",
+   "idea": "Distill LLM reasoning into representations and small models existing ranking systems serve; cache offline embeddings with a small online head; precompute KV cartridges ahead of time.",
+   "contested": false,
+   "cids": [
+    "c1243",
+    "c1554",
+    "c1511"
+   ]
+  },
+  {
+   "key": "D-80",
+   "title": "Skip the Docker build-push loop by running local code directly on remote GPUs",
+   "idea": "Decorating functions or attaching local code to live cloud GPUs with on-the-fly dependencies removes ~15-minute build/registry/provision iterations.",
+   "contested": false,
+   "cids": [
+    "c0397",
+    "c1872"
+   ]
+  },
+  {
+   "key": "D-81",
+   "title": "Exercise failure paths: test fallbacks regularly and set per-model timeouts",
+   "idea": "A configured provider fallback that is never exercised fails in the real outage; measure latency per model and set model-specific timeouts rather than one global value.",
+   "contested": false,
+   "cids": [
+    "c2000",
+    "c2001"
+   ]
+  },
+  {
+   "key": "D-82",
+   "title": "Verify data migrations and recovery by row counts and convergence, not logs",
+   "idea": "Backup/restore or CDC logs don't prove correctness; compare row counts, attributes and replica convergence, with idempotent consumers.",
+   "contested": false,
+   "cids": [
+    "c1231",
+    "c1687"
+   ]
+  },
+  {
+   "key": "D-83",
+   "title": "Data sovereignty needs explicit control over where data is processed and by whom",
+   "idea": "Cross-border processing and provider dependence break first; split application, control and data planes so customers keep data in their own infrastructure while the vendor operates the agent.",
+   "contested": false,
+   "cids": [
+    "c0911",
+    "c0985"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0986",
+  "c1129",
+  "c1539",
+  "c1633",
+  "c0209",
+  "c0509",
+  "c1638",
+  "c1603",
+  "c0132",
+  "c0133",
+  "c0520",
+  "c2006",
+  "c0201",
+  "c0745",
+  "c1708",
+  "c0480",
+  "c0797",
+  "c0672",
+  "c0673",
+  "c0934",
+  "c2061",
+  "c1873",
+  "c1834",
+  "c0220",
+  "c0493",
+  "c0614",
+  "c1031",
+  "c1079"
+ ],
+ "noise": [
+  "c0062",
+  "c0392",
+  "c0393",
+  "c0038",
+  "c0862",
+  "c0456",
+  "c1281",
+  "c1306"
+ ]
+}
