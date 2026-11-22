@@ -72,7 +72,9 @@ the run again with a new snapshot.
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
 2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
    Talks already published are skipped. "picked 0" ends the run here with a note: nothing new
-   found, and the fetcher's number of talks with no event not checked.
+   found, and the fetcher's number of talks with no event not checked. When the fetcher
+   reported a gap in its list, the note says "list incomplete" and names the gap instead of
+   "nothing new found".
 3. **Extract.** One `aie-worker` per `<scratch>/batches/batch-NN.json`, in parallel, each
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
 4. **Merge.** `python -I -B data/pipeline/merge_claims.py --claims-dir <scratch>/claims --data data --areas-out <scratch>/areas --index <scratch>/batches/index.json`.
@@ -90,8 +92,9 @@ the run again with a new snapshot.
    commit.
 8. **Commit.** Follow [`commit.md`](commit.md).
 
-A run ends with a draft pull request and a one-line note: talks picked, talks with no event
-not checked (the fetcher's return), claims added, new clusters, and the pull request URL, or
+A run ends with a draft pull request and a one-line note: talks picked, any gap in the
+fetcher's list, talks with no event not checked (the fetcher's own count, which no script
+checks yet: #360), claims added, new clusters, and the pull request URL, or
 the step where it stopped and why.
 
 ## What this split does not stop

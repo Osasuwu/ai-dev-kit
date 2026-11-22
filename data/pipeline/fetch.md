@@ -13,11 +13,13 @@ The local files you read are this one, `data/sources.md` and `data/talks.jsonl`;
    because step 3 counts them.
 2. **List.** List the talks with `search(kind="talk", event=<s>)`, with no `query`: one call
    series per part of `<events>`, each `<s>` a plain substring that every event name it
-   stands for contains (for `2026|2027`, `<s>` is `2026`, then `2027`), following
-   `pagination.nextOffset` until it is null. The `event` filter matches part of the event
-   name, so keep the talks whose event matches `<events>`. For each `<s>`, note
-   `pagination.total` and the number of talks you read; when they differ, the list has a
-   gap, and you say so in your return. Record each talk's slug, title, URL, event name,
+   stands for contains, at least 2 characters (for `2026|2027`, `<s>` is `2026`, then
+   `2027`). If a part of `<events>` has no such substring, stop and say so in your return.
+   Follow `pagination.nextOffset` until it is null, passing the `contentVersion` of the
+   first result with every later call, step 3's included. The `event` filter matches part of
+   the event name, so keep the talks whose event matches `<events>`. For each `<s>`, note
+   `pagination.total` and the number of talks you read. When they differ, or a result
+   reports another `contentVersion`, the list has a gap: say so in your return. Record each talk's slug, title, URL, event name,
    duration and speakers as the source gives them. The data API's talk list is too large for
    `WebFetch` (`data/sources.md`); do not try another way in.
 3. **Count the talks with no event.** No tool lists them: the `event` filter never matches a
@@ -32,8 +34,8 @@ The local files you read are this one, `data/sources.md` and `data/talks.jsonl`;
 
    `X` is right when every published talk that has an event is in the list from step 2. A
    published talk missing from that list for any other reason (its event is not in
-   `<events>`, the conference dropped or renamed it, the list has a gap) makes `X` one too
-   low. If `X` is below 0, that has happened: report all `N0` as not checked. An event string
+   `<events>`, the conference dropped or renamed it, the list has a gap) lowers `X` by one
+   for each such talk. If `X` is below 0, that has happened: report all `N0` as not checked. An event string
    with no "20" in it counts as no event, which can only raise `X`.
 4. **Read.** For each talk not already published, read its record with the MCP `fetch` tool
    (`id` = `talk:<slug>`): the summary, and the slide text when the record has it. When
@@ -45,5 +47,5 @@ The local files you read are this one, `data/sources.md` and `data/talks.jsonl`;
    nothing else, and nothing outside `<scratch>`.
 
 Return only: the events matched; per `<s>`, its `pagination.total` and the talks you read;
-the talks written; the talks whose `fetch` returned nothing; and `T`, `E`, `N0`, `P` and the
+any gap; the talks written; the talks whose `fetch` returned nothing; and `T`, `E`, `N0`, `P` and the
 number of talks with no event not checked.

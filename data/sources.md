@@ -17,13 +17,13 @@ them.
 - **Talk lists and talk records**: the conference data API,
   `https://ai.engineer/api/data/<dataset>?format=json`. The datasets `status` (`publishedAt`,
   `corpusVersion`), `topics` and `chapters` were used before, by a script that sent a
-  browser `User-Agent`. The rerun's fetcher uses `WebFetch`, which cannot set one; if the API
-  refuses it, the fetcher says so and the run uses the MCP tools below. The 2026 talk list
-  carried `slug`, `title`, `url`, `event`, `durationMs`, `speakers`, `topics`, `summary` and
-  `slideText` per talk. Checked on 2026-11-22 (#357): the talk list is the dataset `talks`.
-  `WebFetch` is not refused, but the `talks` response is over its 10 MB cap whatever
-  parameters are added (`limit`, `page`, `fields`, `event`, `format=csv`), so a rerun
-  cannot read it. `status` works and gives `counts.talks`, the corpus size, but no count per
+  browser `User-Agent`. The 2026 talk list carried `slug`, `title`, `url`, `event`,
+  `durationMs`, `speakers`, `topics`, `summary` and `slideText` per talk. Checked on
+  2026-11-22 (#357): the talk list is most likely the dataset `talks`, by its name and size;
+  its response was never read. `WebFetch` is not refused, but the `talks` response is over
+  its 10 MB cap with each parameter tried (`limit`, `page`, `fields`, `event`,
+  `format=csv`), so the rerun's fetcher does not use the data API; it uses the MCP tools
+  below. `status` works and gives `counts.talks`, the corpus size, but no count per
   event. `/api/data` and `/api/data/datasets` return 404.
 - **Talk records and citations**: the `ai-engineer` MCP server. `fetch` with `id` =
   `talk:<slug>` returns the talk; with `section: "transcript"` and `query` = a claim's `search`
@@ -35,7 +35,8 @@ them.
   `event` filter matches part of the event name and never matches a talk with no event, and
   conference records list no talks, so the fetch step counts the talks with no event rather
   than listing them (`pipeline/fetch.md`, step 3).
-- **Talks with no event, for a later listing** (#357, not used by the rerun): the topic
+- **Talks with no event, for a later listing** (#360; the rerun's fetcher does not use
+  this route and does not open the page below): the topic
   filter and the topic records reach them. `fetch` with `id` = `topic:<slug>` returns the
   topic's talk ids (`talkIds`; on the one topic compared, the same 25 the topic filter gave).
   The MCP has no list of topics; the page `https://ai.engineer/topics` lists the slugs.
