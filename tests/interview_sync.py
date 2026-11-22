@@ -7,8 +7,13 @@ This check keeps their questions in step:
   `<!-- questions:end -->`.
 - Every top-level numbered item in that section is a question and opens with a tag,
   `1. <!-- q:<id> --> <question text>`. The id is lowercase letters, digits and hyphens.
+  A question runs from its tag line to the next item or the end of the section.
+- A `<!-- q:` tag anywhere else in the file (after the section, on a bullet, mid-line) fails,
+  so a question cannot be added where the check does not count it.
 - Both files list the same ids in the same order. A question added, dropped or moved in one
   file and not the other fails, and so does an untagged question or an id used twice.
+- Each question has as many question marks in one file as in the other, so a sub-question
+  added in one language only fails.
 - Each question in the Russian file has Russian text on its tag line, so an English question
   pasted into the Russian file unchanged fails too.
 
@@ -25,6 +30,7 @@ from pathlib import Path
 
 START = "<!-- questions:start -->"
 END = "<!-- questions:end -->"
+TAG = "<!-- q:"
 
 PROMPTS = Path("prompts")
 EN_PROMPT = PROMPTS / "interview.en.md"
@@ -35,10 +41,10 @@ _TAGGED = re.compile(r"^\d+\.\s+<!-- q:([a-z0-9-]+) -->\s*(.*)$")
 _CYRILLIC = re.compile(r"[А-Яа-яЁё]")
 
 
-def question_ids(
+def questions(
     text: str, label: str, *, russian: bool = False
-) -> tuple[list[str], list[str]]:
-    """Return the question ids of one prompt in order, and the errors found reading them."""
+) -> tuple[list[tuple[str, int]], list[str]]:
+    """One prompt's questions in order as (id, question marks), and the errors reading them."""
     lines = text.splitlines()
     starts = [i for i, line in enumerate(lines) if line.strip() == START]
     ends = [i for i, line in enumerate(lines) if line.strip() == END]
@@ -46,36 +52,61 @@ def question_ids(
         return [], [
             f"{label}: needs exactly one {START} line followed by one {END} line"
         ]
+    first, last = starts[0] + 1, ends[0]
 
-    ids: list[str] = []
+    found: list[tuple[str, int]] = []
     errors: list[str] = []
-    for offset, line in enumerate(lines[starts[0] + 1 : ends[0]]):
-        if not _ITEM.match(line):
+    current = False
+    for index, line in enumerate(lines):
+        lineno = index + 1
+        inside = first <= index < last
+        tagged = _TAGGED.match(line) if inside else None
+        if TAG in line and not tagged:
+            errors.append(
+                f"{label}:{lineno}: a q: tag outside a question line of the section"
+            )
+        if not inside:
             continue
-        lineno = starts[0] + 2 + offset
-        tagged = _TAGGED.match(line)
+        if not _ITEM.match(line):
+            if current:
+                qid, marks = found[-1]
+                found[-1] = (qid, marks + line.count("?"))
+            continue
+        current = False
         if not tagged:
-            errors.append(f"{label}:{lineno}: a question without a <!-- q:<id> --> tag")
+            if TAG not in line:
+                errors.append(
+                    f"{label}:{lineno}: a question without a {TAG}<id> --> tag"
+                )
             continue
         qid, rest = tagged.group(1), tagged.group(2)
-        if qid in ids:
+        if qid in (seen for seen, _ in found):
             errors.append(f"{label}:{lineno}: q:{qid} is used twice")
             continue
         if russian and not _CYRILLIC.search(rest):
             errors.append(f"{label}:{lineno}: q:{qid} has no Russian text on its line")
-        ids.append(qid)
-    if not ids and not errors:
+        found.append((qid, rest.count("?")))
+        current = True
+    if not found and not errors:
         errors.append(f"{label}: no questions between {START} and {END}")
-    return ids, errors
+    return found, errors
 
 
 def check(en_text: str, ru_text: str) -> list[str]:
     """Every way the two prompts' questions are out of step; empty when they match."""
-    en_ids, errors = question_ids(en_text, "en")
-    ru_ids, ru_errors = question_ids(ru_text, "ru", russian=True)
+    en, errors = questions(en_text, "en")
+    ru, ru_errors = questions(ru_text, "ru", russian=True)
     errors += ru_errors
-    if errors or en_ids == ru_ids:
+    if errors:
         return errors
+    en_ids = [qid for qid, _ in en]
+    ru_ids = [qid for qid, _ in ru]
+    if en_ids == ru_ids:
+        return [
+            f"q:{qid} has {en_marks} question marks in en, {ru_marks} in ru"
+            for (qid, en_marks), (_, ru_marks) in zip(en, ru)
+            if en_marks != ru_marks
+        ]
     if len(en_ids) != len(ru_ids):
         errors.append(
             f"question count differs: en has {len(en_ids)}, ru has {len(ru_ids)}"

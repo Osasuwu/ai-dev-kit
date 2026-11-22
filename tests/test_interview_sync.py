@@ -103,7 +103,44 @@ def test_missing_section_markers_fail():
     ]
 
 
+def test_second_questions_section_fails():
+    ru = (
+        RU
+        + "\n<!-- questions:start -->\n1. <!-- q:extra --> Ещё вопрос?\n<!-- questions:end -->\n"
+    )
+    assert check(EN, ru) == [
+        "ru: needs exactly one <!-- questions:start --> line followed by one <!-- questions:end --> line",
+    ]
+
+
+def test_question_tag_after_the_section_fails():
+    ru = RU + "\n10. <!-- q:extra --> Ещё вопрос?\n"
+    assert check(EN, ru) == ["ru:13: a q: tag outside a question line of the section"]
+
+
+def test_question_tag_on_a_bullet_inside_the_section_fails():
+    en = EN.replace(
+        "   A follow-up line under the question, not a question.",
+        "- <!-- q:extra --> A bulleted question?",
+    )
+    assert check(en, RU) == ["en:7: a q: tag outside a question line of the section"]
+
+
+def test_sub_question_added_in_one_language_fails():
+    en = EN.replace(
+        "   A follow-up line under the question, not a question.",
+        "   And which version of it?",
+    )
+    assert check(en, RU) == ["q:agent has 2 question marks in en, 1 in ru"]
+
+
 def test_missing_prompt_file_fails(tmp_path):
     (tmp_path / "prompts").mkdir()
     (tmp_path / "prompts" / "interview.en.md").write_text(EN, encoding="utf-8")
     assert check_tree(tmp_path) == ["missing: prompts/interview.ru.md"]
+
+
+def test_missing_english_prompt_file_fails(tmp_path):
+    (tmp_path / "prompts").mkdir()
+    (tmp_path / "prompts" / "interview.ru.md").write_text(RU, encoding="utf-8")
+    assert check_tree(tmp_path) == ["missing: prompts/interview.en.md"]

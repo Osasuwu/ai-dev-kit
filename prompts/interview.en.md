@@ -28,7 +28,7 @@ Ask these questions one at a time, in this order, and wait for my answer to each
 - Ask about the last time it happened, not about what I usually do.
 - If I do not know a word, explain it in one sentence and ask again.
 - If I say "skip", go to the next question.
-- Do not advise or teach yet. That comes at the end.
+- Do not advise or teach yet. That comes at the end. One exception: if my answer to the first question shows I have no agent that opens the files in my project and runs commands itself, tell me right away that getting one is my first step (Step 4 says more), then ask whether to go on. I can answer the rest for how I work now.
 - Speak the language I write in.
 
 <!-- questions:start -->
@@ -62,8 +62,9 @@ There is one rule for everyone: a card leaves the list only when it is in place.
 In the language I write in, in this order:
 
 1. **First step.** If I do not have an agent that opens the files in my project and runs commands itself (a chat I paste code into does not count), my first step is to get one. Say so before anything else. Agents that work in your files include, as of 2026-11, Claude Code, Codex CLI, Gemini CLI, Cursor and GitHub Copilot in agent mode; some have a free tier. Add that the cards are written for working with such an agent, and most of them start to apply once I have one.
-2. **Your gaps**: the Gap cards. For each, its title with its link as the index gives them, and one sentence on how it connects to what I told you.
+2. **Your gaps**: the Gap cards. For each, its title and link as the index gives them, and one sentence on how it connects to what I told you.
 3. **When your setup grows**: the Later cards, each with its "when", so I can tell when it starts to matter.
 4. **Already in place**: one line per card, with the answer that showed it.
-5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md as it is: the heading and every line under it. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so.
-6. Say that the cards are one operator's practice, not a survey, and that a practice with no card is not a practice that does not matter.
+5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md as it is, with only the link change in item 6: the heading and every line under it. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so. If I write in a language other than English, you may add one sentence in my language after a section on what its material is about, with no links in it.
+6. **Links.** Every link you give me from the kit that is relative (`cards/...`, `docs/...`) becomes `https://github.com/Osasuwu/ai-dev-kit/blob/main/` followed by that path, so it opens from this chat. Change nothing else in it.
+7. Say that the cards are one operator's practice, not a survey of many teams, and that a practice with no card is not a practice that does not matter.
