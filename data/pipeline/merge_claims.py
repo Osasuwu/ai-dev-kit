@@ -116,8 +116,8 @@ def merge(data: Path, claims_dir: Path) -> tuple[list, list, list, list]:
 
 
 def area_slug(area) -> str:
-    """The area as a file name: lower-case letters, digits and dashes, nothing else."""
-    slug = re.sub(r"[^a-z0-9]+", "-", str(area or "").lower()).strip("-")
+    """The area as a file name: lower-case letters, digits and dashes, at most 60 of them."""
+    slug = re.sub(r"[^a-z0-9]+", "-", str(area or "").lower())[:60].strip("-")
     return slug or "other"
 
 
@@ -158,9 +158,10 @@ def main(argv: list[str]) -> int:
         print(f"bad lines {len(bad)}: {', '.join(bad)}; nothing written")
         return 1
     args.data.mkdir(parents=True, exist_ok=True)
+    # The area files go first: they are scratch, so a failure there leaves data/ unchanged.
+    write_areas(args.areas_out, added)
     write_jsonl(args.data / "claims.jsonl", claims)
     write_jsonl(args.data / "talks.jsonl", talks)
-    write_areas(args.areas_out, added)
     print(f"claims {len(claims)} (added {len(added)}) | talks {len(talks)}")
     if args.index:
         index = json.loads(args.index.read_text(encoding="utf-8"))

@@ -8,7 +8,10 @@ columns of its table, header and rows. A field outside the schema (a maintainer'
 relevance column, a talk's title or speakers fetched from the conference site), a value that
 nests more fields or falls outside its range, and a file with no schema fail the check. The only text files allowed are data/README.md, data/sources.md and the
 pipeline's own .md and .py files; they and every data file are also scanned for references
-to the maintainer's private material: a home path or one of the private file names. Prints
+to the maintainer's private material: a home path or one of the private file names, in the
+text of the prose, code and index files and in every decoded string of the JSON files, so no
+escape hides one. A JSON
+record that is not an object is reported, not a crash. Prints
 one line per problem; exit 1 when there is any.
 """
 
@@ -94,8 +97,30 @@ def personal(where, text):
     return []
 
 
+def strings(value):
+    """Every string in a parsed JSON value, keys included."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            yield k
+            yield from strings(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from strings(v)
+
+
+def personal_values(where, value):
+    """The decoded text: a doubled or `\\u005c` escape hides a path from the raw line."""
+    for s in strings(value):
+        for pat in PERSONAL:
+            if pat.search(s):
+                return [f"{where}: personal reference ({pat.pattern})"]
+    return []
+
+
 def check_jsonl(rel, text, allowed):
-    errors = []
+    errors, found = [], []
     for n, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
@@ -104,12 +129,18 @@ def check_jsonl(rel, text, allowed):
         except json.JSONDecodeError:
             errors.append(f"{rel}:{n}: not JSON")
             continue
+        if not isinstance(record, dict):
+            errors.append(f"{rel}:{n}: not an object")
+            continue
         errors += fields(f"{rel}:{n}", record, allowed)
-    return errors + personal(rel, text)
+        found = found or personal_values(f"{rel}:{n}", record)
+    return errors + found
 
 
 def check_group(rel, text):
     group = json.loads(text)
+    if not isinstance(group, dict):
+        return [f"{rel}: not an object"]
     errors = [f"{rel}: missing field '{k}'" for k in GROUP_FIELDS if k not in group]
     errors += [f"{rel}: unexpected field '{k}'" for k in group if k not in GROUP_FIELDS]
     errors += [
@@ -121,17 +152,19 @@ def check_group(rel, text):
         errors += fields(
             f"{rel}: cluster {cluster.get('key')}", cluster, CLUSTER_FIELDS
         )
-    return errors + personal(rel, text)
+    return errors + personal_values(rel, group)
 
 
 def check_merge_map(rel, text):
     doc = json.loads(text)
+    if not isinstance(doc, dict):
+        return [f"{rel}: not an object"]
     errors = [f"{rel}: unexpected field '{k}'" for k in doc if k != "merged"]
     if "merged" not in doc:
         errors.append(f"{rel}: missing field 'merged'")
     for m in doc.get("merged", []):
         errors += fields(f"{rel}: {m.get('key')}", m, MERGED_FIELDS)
-    return errors + personal(rel, text)
+    return errors + personal_values(rel, doc)
 
 
 def check_index(rel, text):
@@ -155,7 +188,8 @@ def check(data_dir: Path) -> list[str]:
     errors = []
     for path in sorted(p for p in data_dir.rglob("*") if p.is_file()):
         rel = path.relative_to(data_dir).as_posix()
-        if "__pycache__" in path.relative_to(data_dir).parts[:-1]:
+        # Bytecode only where the pipeline's own scripts are; anywhere else it has no schema.
+        if rel.startswith(TEXT_DIR) and "__pycache__" in rel.split("/")[:-1]:
             continue
         text = path.read_text(encoding="utf-8")
         if rel == "claims.jsonl":

@@ -7,8 +7,10 @@ as the deletion of its old path and the addition of its new one) and exits 1 whe
 outside what a rerun produces: `cards/`, `data/` except `data/pipeline/`, and `CHANGELOG.md`.
 The sources list is `data/sources.md`, inside `data/`. `.github/`, the pipeline's own code and
 instructions, tests, scripts and every other path are refused, as is a path with a segment
-that starts with a dot (`..`, `data/.gitattributes`) or a leading `/`. Paths are compared
-case-folded, because on a case-insensitive checkout `data/Pipeline/` is `data/pipeline/`. A
+that starts with a dot (`..`, `data/.gitattributes`), a `__pycache__` folder or a leading
+`/`. The refusals compare paths case-folded, because on a case-insensitive checkout
+`data/Pipeline/` is `data/pipeline/`; the allowed paths match in their exact case, so
+`DATA/x.md` and `changelog.md` are refused. A
 staged deletion is refused anywhere: a rerun only adds and changes files, and claims are
 never deleted (`data/sources.md`). Nothing staged also exits 1.
 
@@ -24,18 +26,19 @@ import sys
 ALLOWED_PREFIXES = ("cards/", "data/")
 REFUSED_PREFIXES = ("data/pipeline/",)
 ALLOWED_FILES = ("CHANGELOG.md",)
-ALLOWED_FILES_FOLDED = tuple(f.casefold() for f in ALLOWED_FILES)
 
 
 def allowed(path: str) -> bool:
     folded = path.casefold()
+    segments = folded.split("/")
     # A segment starting with a dot covers `..` and dot files such as `data/.gitattributes`,
     # which can name a filter that runs a command on the next `git add`.
-    if folded.startswith("/") or any(s.startswith(".") for s in folded.split("/")):
+    if folded.startswith("/") or any(s.startswith(".") for s in segments):
         return False
-    if folded.startswith(REFUSED_PREFIXES):
+    if "__pycache__" in segments or folded.startswith(REFUSED_PREFIXES):
         return False
-    return folded in ALLOWED_FILES_FOLDED or folded.startswith(ALLOWED_PREFIXES)
+    # Case is folded to refuse, never to allow: `DATA/x.md` is not under `data/`.
+    return path in ALLOWED_FILES or path.startswith(ALLOWED_PREFIXES)
 
 
 def refused(paths: list[str]) -> list[str]:
