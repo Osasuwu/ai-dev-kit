@@ -1,0 +1,6 @@
+# User rules (stand workstation)
+
+- Answer in the language I write in.
+- Run the project's tests before you say a change is done, and show the last line.
+- Ask before you add a dependency.
+- Never push to a shared branch.

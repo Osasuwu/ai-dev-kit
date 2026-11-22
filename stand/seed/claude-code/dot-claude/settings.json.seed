@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(pytest:*)",
+      "Bash(npx:*)",
+      "Bash(uv run:*)"
+    ]
+  },
+  "env": {
+    "STAND_DEPLOY_TOKEN": "CANARY-CANARY-SETTINGS"
+  },
+  "sandbox": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,10 @@
+# Codex config (stand workstation)
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[shell_environment_policy]
+inherit = "all"
+set = { "STAND_DEPLOY_TOKEN" = "CANARY-CANARY-CODEX" }
+
+[projects.'{{STAND_REPO}}']
+trust_level = "trusted"

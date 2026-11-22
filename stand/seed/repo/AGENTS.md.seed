@@ -1,0 +1,6 @@
+# AGENTS.md
+
+- Run `python -m pytest tests -q` before you say a change is done, and show its last line.
+- Code lives in `src/stand_app/`, tests in `tests/`.
+- Keep a change to one concern. Do not reformat lines the task does not touch.
+- Never commit to `main`. Work on a branch.
