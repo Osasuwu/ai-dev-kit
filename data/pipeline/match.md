@@ -31,9 +31,10 @@ not enough to judge, read that cluster's claims in `data/claims.jsonl` by its `c
 
 1. `<scratch>/matches.jsonl`, one object per verdict:
    `{"cluster":"<new key>","verdict":"dup|extends|contradicts|new","against":"<key or card file, or null>","note":"<what is added or why new, one clause>"}`
-2. `<scratch>/pr-body.md`, the draft pull request's description: the counts per verdict, then
-   one line per `extends`, `contradicts` and `new` verdict with the new key, its title and the
-   note. End with: "Nothing here changes a card. The maintainer picks which of these the agent
-   applies."
+2. `<scratch>/match-summary.md`, for the maintainer to read on their own machine: the counts
+   per verdict, then one line per `extends`, `contradicts` and `new` verdict with the new key,
+   its title and the note. End with: "Nothing here changes a card. The maintainer picks which
+   of these the agent applies." It is not posted anywhere: the pull request's description is
+   written by the commit step from counts only.
 
 Write nothing else. Return only: both paths and the counts per verdict.

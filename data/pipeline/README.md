@@ -1,7 +1,7 @@
 # The data rerun
 
 How `data/` is regenerated when new conference talks come out. The steps are agent-run
-instruction files plus four small scripts; a run is an agent session that follows this file.
+instruction files plus six small scripts; a run is an agent session that follows this file.
 Where the data comes from and how to refetch it: [`../sources.md`](../sources.md).
 
 ## The split
@@ -23,7 +23,9 @@ credentials. The two are kept apart:
 ## Setup, once per device
 
 1. Copy `data/pipeline/agents/aie-fetcher.md` and `aie-worker.md` into `~/.claude/agents/`.
-   Re-copy them when they change.
+   Re-copy them when they change. The tests pin the copies in this folder; the harness
+   enforces the installed ones, so a stale installed copy is caught by nothing but
+   `snapshot.py` (it hashes the installed copies, so a change during a run stops it).
 2. The `ai-engineer` MCP server is connected (the fetcher's `mcp__ai-engineer__*` tools).
 3. The repo's pre-push leak gate is installed (`scripts/pre_push_leak_gate.py`, install steps
    in its docstring).
@@ -35,22 +37,53 @@ Everything fetched stays there; nothing fetched is committed. `<events>` is a re
 expression for the event names in scope, for example `2027`. Run from the repo root, on a new
 branch cut from `origin/main`.
 
+Every script runs as `python -I -B`: `-I` leaves out the user's site-packages (an
+agent-written `usercustomize.py`) and the `PYTHON*` variables, `-B` writes no bytecode into
+`data/pipeline/`.
+
+**Snapshot, before step 1.** The checkout is clean: `git -c core.fsmonitor=false status --porcelain`
+prints nothing. Run `python -I -B data/pipeline/snapshot.py` and keep its one output
+line in the session's own context, not in a file. It hashes the files that run code in, or
+give instructions to, this session: git hooks, the repo's, global and included git config,
+the project's and the user's Claude Code settings, `.mcp.json`, agents, rules and rules files
+(`snapshot.py` lists them). The maintainer's credential helper is read, not replaced, so the
+push authenticates as usual.
+
+**Unchanged check, before every script.** The agents can write files, so before steps 2, 4,
+6, 7 and 8 run, the session checks, in this order:
+
+1. The pipeline is still the one on `origin/main`: both
+   `git -c core.fsmonitor=false diff --quiet origin/main -- data/pipeline` and
+   `git -c core.fsmonitor=false status --porcelain --ignored -- data/pipeline` print nothing
+   and exit 0 (the second catches new and ignored files, such as a planted module).
+2. Nothing outside `data/` changed:
+   `git -c core.fsmonitor=false status --porcelain -- . ":(exclude)data" ":(exclude)CHANGELOG.md"`
+   prints nothing (a planted `AGENTS.md`, `.claude/agents/` file or repo hook script).
+3. `python -I -B data/pipeline/snapshot.py` prints the same line as before step 1.
+
+Any difference stops the run before the script runs: commit nothing and name what changed in
+the run's note. Answering a permission prompt with "don't ask again" during a run rewrites
+`.claude/settings.local.json`, so the next check stops the run: answer prompts once, or start
+the run again with a new snapshot.
+
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
-2. **Batch.** `python data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
+2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
    Talks already published are skipped. "picked 0" ends the run here with a note: nothing new.
 3. **Extract.** One `aie-worker` per `<scratch>/batches/batch-NN.json`, in parallel, each
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
-4. **Merge.** `python data/pipeline/merge_claims.py --claims-dir <scratch>/claims --data data --areas-out <scratch>/areas --index <scratch>/batches/index.json`.
+4. **Merge.** `python -I -B data/pipeline/merge_claims.py --claims-dir <scratch>/claims --data data --areas-out <scratch>/areas --index <scratch>/batches/index.json`.
    Published claims keep their ids; new ones are numbered after the highest. A non-zero exit
-   (unparseable lines) stops the run.
+   (bad batch lines, named in its output) stops the run; the merge has written nothing, so the
+   step reruns cleanly once the batch is fixed.
 5. **Cluster.** The new group letter is the next one after the last `data/clusters/?.json`
    (`G` on the first rerun). Spawn `aie-worker` with the letter and `<scratch>/areas/`; it
    follows [`cluster.md`](cluster.md) and writes `data/clusters/<letter>.json`.
-6. **Index and match.** `python data/pipeline/build_index.py`, then spawn `aie-worker` with
+6. **Index and match.** `python -I -B data/pipeline/build_index.py`, then spawn `aie-worker` with
    the letter and `<scratch>`; it follows [`match.md`](match.md) and writes
-   `<scratch>/matches.jsonl` and `<scratch>/pr-body.md`.
-7. **Check.** `python data/pipeline/check_data.py`. Any problem stops the run before the
+   `<scratch>/matches.jsonl` and `<scratch>/match-summary.md`, which stay on this machine for
+   the maintainer.
+7. **Check.** `python -I -B data/pipeline/check_data.py`. Any problem stops the run before the
    commit.
 8. **Commit.** Follow [`commit.md`](commit.md).
 
@@ -59,8 +92,27 @@ clusters, and the pull request URL, or the step where it stopped and why.
 
 ## What this split does not stop
 
-- An agent's `Write` is not limited to a path. It could write outside `<scratch>` and `data/`,
-  for example into `.git/hooks/` or `.claude/`; the commit guard reads staged paths only.
+- An agent's `Write` is not limited to a path. The snapshot catches a write to the files it
+  hashes and the tree check a change to a tracked or new file outside `data/`; the commit
+  runs with an empty hooks folder. A write anywhere else is not caught: a file the session
+  loads that neither covers (`~/.claude.json`, a file a rules file imports, the system git
+  config file when git does not list it), or a change that takes effect before the
+  next check (a settings hook firing on the session's next tool call). The commit guard
+  reads staged paths only.
+- `python -I` still runs the `.pth` files in the interpreter's own site-packages. An agent
+  that can write there runs code in every script step, `snapshot.py` included; only a
+  site-packages folder the agents cannot write to closes this.
+- An agent's `Read` is not limited to a path. The fetcher is told to read only its step
+  file, `data/sources.md` and `data/talks.jsonl`, and has no `Glob` to search with, but an
+  injected page can still make
+  it read a file whose path it already knows (a token file, an SSH key) and send it out in a
+  `WebFetch` URL or an MCP query. Removing `Read` from the fetcher closes this; it then needs
+  the published talk ids from its task message instead. The worker has no network, but it
+  writes the data files the pull request publishes: a secret it read and wrote into a field
+  is stopped only by the leak gate and gitleaks, which catch known patterns.
+- An agent's text reaches the public pull request only through the data files the scripts
+  check (`check_data.py`); the description is written from the scripts' counts. A data file can still
+  carry injected text in a field, which `check_data.py` does not judge: the human review does.
 - "The session does not read outside text" is an instruction to the session, not a limit.
 - Spawned as a general-purpose agent instead of `aie-fetcher` or `aie-worker`, a step gets every
   tool the session has.
