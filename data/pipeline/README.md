@@ -71,8 +71,8 @@ the run again with a new snapshot.
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
 2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
-   Talks already published are skipped. "picked 0" ends the run here with a note: nothing new, and the
-   fetcher's number of talks with no event not checked.
+   Talks already published are skipped. "picked 0" ends the run here with a note: nothing new
+   found, and the fetcher's number of talks with no event not checked.
 3. **Extract.** One `aie-worker` per `<scratch>/batches/batch-NN.json`, in parallel, each
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
 4. **Merge.** `python -I -B data/pipeline/merge_claims.py --claims-dir <scratch>/claims --data data --areas-out <scratch>/areas --index <scratch>/batches/index.json`.

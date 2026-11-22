@@ -25,19 +25,20 @@ them.
   parameters are added (`limit`, `page`, `fields`, `event`, `format=csv`), so a rerun
   cannot read it. `status` works and gives `counts.talks`, the corpus size, but no count per
   event. `/api/data` and `/api/data/datasets` return 404.
-- **Topic slugs**: the topics page, `https://ai.engineer/topics`, lists every topic's slug.
-  The MCP has no list of topics; the fetcher reads this page only to count and list talks
-  with no event (`pipeline/fetch.md`, step 3).
 - **Talk records and citations**: the `ai-engineer` MCP server. `fetch` with `id` =
   `talk:<slug>` returns the talk; with `section: "transcript"` and `query` = a claim's `search`
   phrase it returns transcript passages, each with a `citation` in Markdown, a link with the
   timestamp. A citation is copied verbatim, never computed or edited.
 - `list_conferences`, `get_schedule` and `search` on the same server list conferences and
   their talks. `search(kind="talk")` needs a filter (event, topic, speaker or organization)
-  and pages 10 talks at a time. Its `event` filter matches part of the event name and never
-  matches a talk with no event, and conference records list no talks. `fetch` with `id` =
-  `topic:<slug>` returns every talk id of that topic (`talkIds`). That is how the fetch step
-  reaches talks with no event.
+  and returns at most 10 talks per call (its `limit` maximum), with `pagination.total`. Its
+  `event` filter matches part of the event name and never matches a talk with no event, and
+  conference records list no talks, so the fetch step counts the talks with no event rather
+  than listing them (`pipeline/fetch.md`, step 3).
+- **Talks with no event, for a later listing** (#357, not used by the rerun): the topic
+  filter and the topic records reach them. `fetch` with `id` = `topic:<slug>` returns the
+  topic's talk ids (`talkIds`; on the one topic compared, the same 25 the topic filter gave).
+  The MCP has no list of topics; the page `https://ai.engineer/topics` lists the slugs.
 
 ## A dropped talk
 
