@@ -13,15 +13,17 @@ This check keeps their questions in step:
   used twice.
 - A question is found by its question marks, wherever it is written: each `?` that ends a
   sentence (not one inside a URL) must belong to a tagged question, and each question must
-  have as many of them in one file as in the other. So a question added after the section,
-  before its first item or under an existing question in one language only fails.
+  have as many of them in one file as in the other. So a question written with a `?` and
+  added in one language only fails, whether it is after the section, before its first item
+  or under an existing question.
 - A `<!-- q:` tag anywhere but at the start of a question line fails.
-- Each question in the Russian file has Russian text on its tag line, so an English question
-  pasted into the Russian file unchanged fails too.
+- Each question's tag line in the Russian file has at least one Cyrillic letter, so an
+  English question pasted into the Russian file unchanged fails too.
 
 What this asks of whoever edits the prompts: keep every `?` inside the questions, mirror
 the number of `?` per question in both languages (two sentences asked as one question in
-English stay two questions in Russian), and do not write `<!-- q:` in prose.
+English stay two questions in Russian), write every question with a `?` (an imperative one,
+"Tell me who else works on it.", is not seen), and do not write `<!-- q:` in prose.
 
 The check reads the question structure only. A question reworded into a different one with
 the same number of question marks passes; whether a translation says the same thing is for

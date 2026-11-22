@@ -53,7 +53,7 @@ Put each card in one of three groups:
 - **Gap**: the card's "when" matches my setup, and the practice is not in place.
 - **Later**: the card's "when" does not match my setup yet (for example, a card about checks on pull requests when I do not use pull requests).
 
-If my answers do not settle a card, ask me one more question, in plain words, about what I did the last time. If you can, read the card's file (its link in the index) and ask about what its Check section looks at. Do not ask whether I "have" the practice by its name. Ask at most one extra question per card, and ask once when one question settles several cards.
+If my answers do not settle a card, ask me one more question, in plain words, about what I did the last time. If you can, read the card's file (its link in the index) and ask about what its Check section looks at. Do not ask whether I "have" the practice by its name. Ask at most one extra question per card, and ask once when one question settles several cards. If I said no to going on in Step 2, ask no extra questions: put each card my answers do not settle in Gap or Later by its "when".
 
 There is one rule for everyone: a card leaves the list only when it is in place. If I have nothing in place, I get every card; if I have most, I get the rest.
 
@@ -61,10 +61,11 @@ There is one rule for everyone: a card leaves the list only when it is in place.
 
 In the language I write in, in this order:
 
-1. **First step.** If I do not have an agent that opens the files in my project and runs commands itself (a chat I paste code into does not count), my first step is to get one. Say so before anything else. Agents that work in your files include, as of 2026-11, Claude Code, Codex CLI, Gemini CLI, Cursor and GitHub Copilot in agent mode; some have a free tier. Add that the cards are written for working with such an agent, and most of them start to apply once I have one.
+1. **First step.** If I do not have an agent that opens the files in my project and runs commands itself (a chat I paste code into does not count), or I did not say whether I have one, my first step is to get one. Say so before anything else. Agents that work in a project's files include, as of 2026-11, Claude Code, Codex CLI, Gemini CLI, Cursor and GitHub Copilot in agent mode; some have a free tier. Add that the cards are written for working with such an agent, and most of them start to apply once I have one.
 2. **Your gaps**: the Gap cards. For each, its title and link as the index gives them, and one sentence on how it connects to what I told you.
 3. **When your setup grows**: the Later cards, each with its "when", so I can tell when it starts to matter.
 4. **Already in place**: one line per card, with the answer that showed it.
-5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md, the heading and every line under it, as it is; the only change is the links, by item 6. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so. If I write in a language other than English, after a section you may add one sentence in my language saying what its material is about, with no links in it.
-6. **Links.** Every link to a file of the kit, relative (`cards/...`, `docs/...`) or resolved against the raw address above, becomes `https://github.com/Osasuwu/ai-dev-kit/blob/main/<path>`, so it opens from this chat. Change nothing else in it. Links to other sites stay as they are.
-7. Say that the cards are one operator's practice, not a summary of many teams' experience, and that a practice with no card is not a practice that does not matter.
+5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md, the heading and every line under it, as it is; the only change is the links, by the rule below. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so. If I write in a language other than English, after a section you may add one sentence in my language saying what its material is about, with no links in it.
+6. Say that the cards are one operator's practice, not a summary of many teams' experience, and that a practice with no card is not a practice that does not matter.
+
+Links, everywhere in your answer (this is a rule, not a part to print): every link to a file of the kit, relative (`cards/...`, `docs/...`) or resolved against the raw address above, becomes `https://github.com/Osasuwu/ai-dev-kit/blob/main/<path>`, so it opens from this chat. Change nothing else in it. Links to other sites stay as they are.
