@@ -1,8 +1,9 @@
 """README class map generator (ADR-0004 decisions 2, 13, 17, 18; #243).
 
 Writes the generated part of README.md between two markers: the "Early version: N of M classes
-written" line, the cross-cutting docs, the class × where-it-surfaces map, and the candidates that
-are not established. The rest of README.md is hand-written and never touched.
+written, plus K cross-cutting doc(s)" line (the "plus" part only when K > 0), the cross-cutting
+docs, the class × where-it-surfaces map, and the candidates that are not established. The rest
+of README.md is hand-written and never touched.
 
     python scripts/generate_readme_map.py            # rewrite the part between the markers
     python scripts/generate_readme_map.py --check    # exit 1 if README.md would change
@@ -144,9 +145,12 @@ def render_block(root: Path) -> str:
             f"{len(classes)} class docs written but planned_classes is {planned} in {REGISTRY_FILE}"
         )
 
+    plus = ""
+    if cross:
+        plus = f", plus {len(cross)} cross-cutting doc{'s' if len(cross) > 1 else ''}"
     lines = [
-        f"Early version: {len(classes)} of {planned} classes written. A class missing from the "
-        "map is not written yet, which does not mean it never happens.",
+        f"Early version: {len(classes)} of {planned} classes written{plus}. A class missing from "
+        "the map is not written yet, which does not mean it never happens.",
         "",
     ]
     if cross:
