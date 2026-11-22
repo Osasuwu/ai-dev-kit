@@ -68,26 +68,32 @@ def parse_date(text: str) -> date | None:
         return None
 
 
-def read_log(path: Path) -> list[Line]:
-    """The poll's own lines from runs.log, oldest first. Raises ValueError on a bad one."""
+def read_log(path: Path) -> tuple[list[Line], str | None]:
+    """The poll's readable lines from runs.log, oldest first, and the first problem.
+
+    A poll line this poll cannot read is left out and named, so the readable lines still
+    keep the week's one-line rule.
+    """
     if not path.exists():
-        return []
-    lines = []
-    for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        return [], None
+    lines, problem = [], None
+    text = path.read_text(encoding="utf-8", errors="replace")
+    for number, raw in enumerate(text.splitlines(), 1):
         fields = raw.split("\t")
         if len(fields) < 2 or fields[1] != "poll":
             continue
         when = parse_date(fields[0])
         if len(fields) < 5 or when is None or fields[2] not in KINDS:
-            raise ValueError(
-                f"runs.log line {number} is a poll line this poll cannot read"
-            )
+            if problem is None:
+                problem = f"runs.log line {number} is a poll line this poll cannot read"
+            continue
         seen = fields[3].removeprefix("seen=")
         lines.append(Line(when, fields[2], int(seen) if seen.isdigit() else None))
-    return lines
+    return lines, problem
 
 
 def count_seen(path: Path) -> int | None:
+    """Distinct non-blank ids; None when the file is missing. Raises on an unreadable one."""
     if not path.exists():
         return None
     return len(
@@ -136,13 +142,23 @@ def finished_starts(lines: list[Line]) -> list[Line]:
 
 
 def decide(
-    seen: int | None, lines: list[Line], events: list[tuple[str, date]], today: date
+    seen: int | None,
+    lines: list[Line],
+    events: list[tuple[str, date]],
+    today: date,
+    problem: str | None = None,
 ):
-    """Return (kind, reason) for this week. kind is start, exit or skip."""
+    """Return (kind, reason) for this week. kind is start, exit or skip.
+
+    `problem` names an input that could not be read; after the week check it is the exit
+    reason.
+    """
     week = today.isocalendar()[:2]
     for line in lines:
         if line.kind in ("start", "exit") and line.when.isocalendar()[:2] == week:
             return "skip", f"already decided this week ({line.when})"
+    if problem is not None:
+        return "exit", problem
     if seen is None:
         return "exit", "seen.txt missing"
     counted = [line for line in lines if line.seen is not None]
@@ -216,15 +232,17 @@ def run_decide(args) -> int:
         return 2
     now = parse_now(args.now)
     today = now.astimezone(timezone.utc).date()
-    seen = count_seen(state / "seen.txt")
+    lines, problem = read_log(state / "runs.log")
+    try:
+        seen = count_seen(state / "seen.txt")
+    except (OSError, ValueError):
+        seen, problem = None, problem or "seen.txt unreadable"
     events = []
     try:
-        lines = read_log(state / "runs.log")
         events = load_events(args.events)
     except ValueError as err:
-        kind, reason = "exit", str(err)
-    else:
-        kind, reason = decide(seen, lines, events, today)
+        problem = problem or str(err)
+    kind, reason = decide(seen, lines, events, today, problem)
     if args.blocked is not None and kind != "skip":
         kind, reason = "exit", f"clone not updated: {args.blocked}"
     if kind != "skip":
@@ -240,7 +258,10 @@ def run_decide(args) -> int:
 
 def run_outcome(args) -> int:
     state = args.state_dir.expanduser()
-    lines = read_log(state / "runs.log")
+    lines, problem = read_log(state / "runs.log")
+    if problem is not None:
+        print(f"{problem}; fix it by hand first", file=sys.stderr)
+        return 2
     running = open_start(lines)
     if running is None:
         print("no open rerun: every start line has an outcome", file=sys.stderr)
@@ -253,9 +274,12 @@ def run_outcome(args) -> int:
 
 def run_baseline(args) -> int:
     state = args.state_dir.expanduser()
-    seen = count_seen(state / "seen.txt")
+    try:
+        seen = count_seen(state / "seen.txt")
+    except (OSError, ValueError):
+        seen = None
     if seen is None:
-        print(f"seen.txt not found in {state}", file=sys.stderr)
+        print(f"seen.txt missing or unreadable in {state}", file=sys.stderr)
         return 2
     append(state / "runs.log", parse_now(args.now), "baseline", seen, args.why)
     return 0

@@ -366,6 +366,25 @@ def test_stated_thresholds(tmp_path):
         assert line in readme.splitlines()
 
 
+def test_task_prompt_hardens_every_git_call_and_runs_the_copied_poll():
+    # A file an agent planted in the clone must not run through the task's own commands.
+    text = (POLL / "task.md").read_text(encoding="utf-8")
+    git_calls = [x for x in text.split("`") if x.startswith("git ")]
+    assert len(git_calls) == 9
+    bad = [
+        x
+        for x in git_calls
+        if not x.startswith(
+            "git -C ~/aie-poll/ai-dev-kit -c core.fsmonitor=false -c core.hooksPath=<empty> "
+        )
+    ]
+    assert bad == []
+    runs = [x for x in text.split("`") if x.startswith("python ")]
+    assert len(runs) == 5
+    assert [x for x in runs if not x.startswith("python -I -B <poll>/poll.py ")] == []
+    assert "status --porcelain --ignored`" in text
+
+
 def test_shipped_event_list_is_well_formed():
     events = json.loads((POLL / "events.json").read_text(encoding="utf-8"))
     assert events, "events.json is empty"
@@ -412,6 +431,52 @@ def test_unreadable_event_entry_exits_and_names_it(tmp_path, capsys):
     assert capsys.readouterr().out == (
         "exit events.json entry 2 has no id or no readable end date\n"
     )
+
+
+def test_unreadable_input_still_writes_one_line_a_week(tmp_path, capsys):
+    log = INSTALL + "2026-11-30T09:00:00Z\tpoll\tbogus\n"
+    state = make_state(tmp_path, 1200, log=log)
+    run(tmp_path, state, "2026-12-07T09:00:00Z")
+    capsys.readouterr()
+    run(tmp_path, state, "2026-12-08T09:00:00Z")
+    assert capsys.readouterr().out == "skip already decided this week (2026-12-07)\n"
+    run(tmp_path, state, "2026-12-09T09:00:00Z", events=FUTURE + [{"id": "x"}])
+    assert capsys.readouterr().out == "skip already decided this week (2026-12-07)\n"
+    assert len(log_lines(state)) == 3
+
+
+def test_unreadable_seen_list_exits_and_records_why(tmp_path, capsys):
+    state = make_state(tmp_path, 0, log=INSTALL)
+    (state / "seen.txt").write_bytes(b"talk-1\n\xff\xfe\n")
+    run(tmp_path, state, "2026-11-30T09:00:00Z")
+    assert capsys.readouterr().out == "exit seen.txt unreadable\n"
+    assert (
+        log_lines(state)[-1]
+        == "2026-11-30T09:00:00Z\tpoll\texit\tseen=-\tseen.txt unreadable"
+    )
+    rc = poll.main(["baseline", "rebuilt", "--state-dir", str(state)])
+    assert rc == 2
+    assert len(log_lines(state)) == 2
+
+
+def test_seen_count_is_distinct_non_blank_ids(tmp_path, capsys):
+    state = make_state(tmp_path, 0)
+    (state / "seen.txt").write_text("a\nb\na\n\n   \n c \nc\n", encoding="utf-8")
+    run(tmp_path, state, "2026-11-23T09:00:00Z")
+    assert capsys.readouterr().out == "exit first poll: baseline set at seen=3\n"
+
+
+def test_outcome_refuses_an_unreadable_log(tmp_path, capsys):
+    log = INSTALL + "2026-11-30T09:00:00Z\tpoll\tstart\tseen=1200\tx\n"
+    log += "2026-12-01T09:00:00Z\tpoll\tbogus\n"
+    state = make_state(tmp_path, 1200, log=log)
+    rc = poll.main(["outcome", "failed", "why", "--state-dir", str(state)])
+    assert rc == 2
+    assert (
+        "runs.log line 3 is a poll line this poll cannot read"
+        in capsys.readouterr().err
+    )
+    assert len(log_lines(state)) == 3
 
 
 def test_missing_digest_state_is_named_in_the_reason(tmp_path, capsys):

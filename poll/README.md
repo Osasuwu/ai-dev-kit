@@ -65,19 +65,31 @@ Other writers' lines (the digest's own) are skipped. Lines are only ever appende
 
 ## When a line needs a person
 
-- **A rerun that never recorded its outcome.** The session stopped part way: the app closed,
-  or it waited on a permission prompt nobody answered. Every week then exits with
-  `rerun started <date> has no outcome line`. Look at what the run left (its `rerun/<date>`
-  branch in the task's clone, its draft pull request if any), then, from the clone, record it:
-  `python -I -B poll/poll.py outcome failed "<why>"`, or `outcome done "<pull request URL>"`
-  when it did finish.
+- **A rerun that never recorded its outcome.** Either a tamper stop (the rerun stopped at
+  its snapshot, an unchanged check, `commit.md`'s path list or `commit_guard.py`; the task's
+  last line starts `held:` and names what changed), or the session stopped part way: the app
+  closed, or it waited on a permission prompt nobody answered. Every week then exits with
+  `rerun started <date> has no outcome line`, or `clone not updated` while the clone is
+  dirty. After a tamper stop, find and undo the change first (the clone, git config, Claude
+  Code settings, agents); the task leaves the clone untouched for that. Then, from a clean
+  checkout of `main`, record the outcome: `python -I -B poll/poll.py outcome failed "<why>"`,
+  or `outcome done "<pull request URL>"` when the run did finish. A stopped run's work is on
+  its `rerun/<date>` branch in the task's clone, or uncommitted there after a tamper stop.
 - **`seen.txt shrank`.** The digest's list was rebuilt or trimmed, and a count since the old
   baseline would be wrong. Every week exits until a new baseline is set:
   `python -I -B poll/poll.py baseline "<why>"` records today's count. Events are unaffected.
-- **`clone not updated`.** The task's clone could not be switched to `origin/main`. Its reason
-  names the command; a failed rerun's work is kept on its `rerun/<date>` branch (`task.md`
-  step 4), so the cause is usually elsewhere: no network, or a change made in the clone by
-  hand.
+- **`clone not updated`.** The task's clone could not be fetched or switched to
+  `origin/main`, or holds uncommitted or ignored files. Its reason names the command. A
+  failed rerun's work is kept on its `rerun/<date>` branch (`task.md` step 4), so the cause
+  is a tamper stop (above), no network, or a change made in the clone by hand. The task never
+  cleans the clone itself: an ignored file such as `.claude/settings.local.json` would load
+  into the next session.
+
+The task runs `poll.py` from a copy it takes out of `origin/main` each week, never from the
+clone's working tree, and runs every git command in the clone with
+`-c core.fsmonitor=false -c core.hooksPath=<empty>` (an empty folder), as the rerun's commit
+step does. A file the rerun's agents wrote into the clone therefore runs no code in the
+task's session by way of the poll.
 
 ## Setup, once per device
 
