@@ -134,6 +134,43 @@ def test_sub_question_added_in_one_language_fails():
     assert check(en, RU) == ["q:agent has 2 question marks in en, 1 in ru"]
 
 
+def test_extra_question_on_the_tag_line_in_one_language_fails():
+    ru = RU.replace("Что вы проверили?", "Что вы проверили? И как?")
+    assert check(EN, ru) == ["q:done has 1 question marks in en, 2 in ru"]
+
+
+def test_untagged_question_after_the_section_fails():
+    ru = RU + "\n10. Сколько человек в команде?\n"
+    assert check(EN, ru) == ["ru:13: a question mark outside a question of the section"]
+
+
+def test_untagged_question_in_another_form_inside_the_section_fails():
+    ru = RU.replace(
+        "<!-- questions:end -->", "10) Расскажите о команде?\n<!-- questions:end -->"
+    )
+    assert check(EN, ru) == ["q:merge has 1 question marks in en, 2 in ru"]
+    ru = RU.replace(
+        "1. <!-- q:agent -->",
+        "Сначала вопрос без номера?\n1. <!-- q:agent -->",
+    )
+    assert check(EN, ru) == ["ru:6: a question mark outside a question of the section"]
+
+
+def test_tag_without_spaces_after_the_section_fails():
+    ru = RU + "\n10. <!--q:team--> Кто в команде\n"
+    assert check(EN, ru) == ["ru:13: a q: tag outside a question line of the section"]
+
+
+def test_malformed_tag_on_a_question_line_fails():
+    en = EN.replace("<!-- q:agent -->", "<!-- q:Agent -->")
+    assert check(en, RU) == ["en:6: a malformed q: tag on a question line"]
+
+
+def test_question_mark_in_a_link_is_not_a_question():
+    en = EN.replace("Intro.", "See [a talk](https://example.com/watch?v=1&t=2).")
+    assert check(en, RU) == []
+
+
 def test_missing_prompt_file_fails(tmp_path):
     (tmp_path / "prompts").mkdir()
     (tmp_path / "prompts" / "interview.en.md").write_text(EN, encoding="utf-8")

@@ -15,7 +15,7 @@ Fetch these two files:
 - https://raw.githubusercontent.com/Osasuwu/ai-dev-kit/main/INDEX.md: one line per practice card.
 - https://raw.githubusercontent.com/Osasuwu/ai-dev-kit/main/WATCH-LIST.md: the talks and pages behind each card.
 
-Links inside them are relative to `https://raw.githubusercontent.com/Osasuwu/ai-dev-kit/main/`.
+Links inside them are relative to `https://raw.githubusercontent.com/Osasuwu/ai-dev-kit/main/`. The kit is written in English.
 
 If you cannot fetch them, ask me to open the two links in a browser and paste what they show, one file at a time. Do not go on from memory and do not make up cards or links: if neither works, say "I could not read the kit" and stop.
 
@@ -28,7 +28,7 @@ Ask these questions one at a time, in this order, and wait for my answer to each
 - Ask about the last time it happened, not about what I usually do.
 - If I do not know a word, explain it in one sentence and ask again.
 - If I say "skip", go to the next question.
-- Do not advise or teach yet. That comes at the end. One exception: if my answer to the first question shows I have no agent that opens the files in my project and runs commands itself, tell me right away that getting one is my first step (Step 4 says more), then ask whether to go on. I can answer the rest for how I work now.
+- Do not advise or teach yet. That comes at the end. One exception: if my answer to the first question shows I have no agent that opens the files in my project and runs commands itself, tell me right away that getting one is my first step (Step 4 says more), and that I can still answer the rest for how I work now. Then ask whether to go on. If I say no, go to Step 3 with the answers you have.
 - Speak the language I write in.
 
 <!-- questions:start -->
@@ -65,6 +65,6 @@ In the language I write in, in this order:
 2. **Your gaps**: the Gap cards. For each, its title and link as the index gives them, and one sentence on how it connects to what I told you.
 3. **When your setup grows**: the Later cards, each with its "when", so I can tell when it starts to matter.
 4. **Already in place**: one line per card, with the answer that showed it.
-5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md as it is, with only the link change in item 6: the heading and every line under it. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so. If I write in a language other than English, you may add one sentence in my language after a section on what its material is about, with no links in it.
-6. **Links.** Every link you give me from the kit that is relative (`cards/...`, `docs/...`) becomes `https://github.com/Osasuwu/ai-dev-kit/blob/main/` followed by that path, so it opens from this chat. Change nothing else in it.
-7. Say that the cards are one operator's practice, not a survey of many teams, and that a practice with no card is not a practice that does not matter.
+5. **Watch list**: for each Gap card, then each Later card, copy its section from WATCH-LIST.md, the heading and every line under it, as it is; the only change is the links, by item 6. Do not rewrite or shorten it, and do not add links, from memory or anywhere else. If a card has no section there, say so. If I write in a language other than English, after a section you may add one sentence in my language saying what its material is about, with no links in it.
+6. **Links.** Every link to a file of the kit, relative (`cards/...`, `docs/...`) or resolved against the raw address above, becomes `https://github.com/Osasuwu/ai-dev-kit/blob/main/<path>`, so it opens from this chat. Change nothing else in it. Links to other sites stay as they are.
+7. Say that the cards are one operator's practice, not a summary of many teams' experience, and that a practice with no card is not a practice that does not matter.

@@ -8,17 +8,24 @@ This check keeps their questions in step:
 - Every top-level numbered item in that section is a question and opens with a tag,
   `1. <!-- q:<id> --> <question text>`. The id is lowercase letters, digits and hyphens.
   A question runs from its tag line to the next item or the end of the section.
-- A `<!-- q:` tag anywhere else in the file (after the section, on a bullet, mid-line) fails,
-  so a question cannot be added where the check does not count it.
 - Both files list the same ids in the same order. A question added, dropped or moved in one
-  file and not the other fails, and so does an untagged question or an id used twice.
-- Each question has as many question marks in one file as in the other, so a sub-question
-  added in one language only fails.
+  file and not the other fails, and so does an untagged question, a malformed tag or an id
+  used twice.
+- A question is found by its question marks, wherever it is written: each `?` that ends a
+  sentence (not one inside a URL) must belong to a tagged question, and each question must
+  have as many of them in one file as in the other. So a question added after the section,
+  before its first item or under an existing question in one language only fails.
+- A `<!-- q:` tag anywhere but at the start of a question line fails.
 - Each question in the Russian file has Russian text on its tag line, so an English question
   pasted into the Russian file unchanged fails too.
 
-The check reads the question structure only. It cannot tell whether a translation says the
-same thing; a reviewer reading both files does that.
+What this asks of whoever edits the prompts: keep every `?` inside the questions, mirror
+the number of `?` per question in both languages (two sentences asked as one question in
+English stay two questions in Russian), and do not write `<!-- q:` in prose.
+
+The check reads the question structure only. A question reworded into a different one with
+the same number of question marks passes; whether a translation says the same thing is for
+a reviewer reading both files.
 
 `tests/test_interview_sync.py` runs it on the shipped files, inside the required `tests` check.
 """
@@ -38,7 +45,10 @@ RU_PROMPT = PROMPTS / "interview.ru.md"
 
 _ITEM = re.compile(r"^\d+\.\s")
 _TAGGED = re.compile(r"^\d+\.\s+<!-- q:([a-z0-9-]+) -->\s*(.*)$")
+_TAG_LIKE = re.compile(r"<!--\s*q:")
 _CYRILLIC = re.compile(r"[А-Яа-яЁё]")
+# A question mark that ends a sentence, not one in a URL (`watch?v=...`).
+_QUESTION_MARK = re.compile(r"\?(?![\w=&])")
 
 
 def questions(
@@ -56,37 +66,46 @@ def questions(
 
     found: list[tuple[str, int]] = []
     errors: list[str] = []
-    current = False
     for index, line in enumerate(lines):
         lineno = index + 1
         inside = first <= index < last
-        tagged = _TAGGED.match(line) if inside else None
-        if TAG in line and not tagged:
+        if inside and _ITEM.match(line):
+            tagged = _TAGGED.match(line)
+            if not tagged:
+                if _TAG_LIKE.search(line):
+                    errors.append(
+                        f"{label}:{lineno}: a malformed q: tag on a question line"
+                    )
+                else:
+                    errors.append(
+                        f"{label}:{lineno}: a question without a {TAG}<id> --> tag"
+                    )
+                continue
+            qid, rest = tagged.group(1), tagged.group(2)
+            if qid in (seen for seen, _ in found):
+                errors.append(f"{label}:{lineno}: q:{qid} is used twice")
+                continue
+            if russian and not _CYRILLIC.search(rest):
+                errors.append(
+                    f"{label}:{lineno}: q:{qid} has no Russian text on its line"
+                )
+            found.append((qid, len(_QUESTION_MARK.findall(rest))))
+            continue
+        if _TAG_LIKE.search(line):
             errors.append(
                 f"{label}:{lineno}: a q: tag outside a question line of the section"
             )
-        if not inside:
             continue
-        if not _ITEM.match(line):
-            if current:
-                qid, marks = found[-1]
-                found[-1] = (qid, marks + line.count("?"))
+        marks = len(_QUESTION_MARK.findall(line))
+        if not marks:
             continue
-        current = False
-        if not tagged:
-            if TAG not in line:
-                errors.append(
-                    f"{label}:{lineno}: a question without a {TAG}<id> --> tag"
-                )
-            continue
-        qid, rest = tagged.group(1), tagged.group(2)
-        if qid in (seen for seen, _ in found):
-            errors.append(f"{label}:{lineno}: q:{qid} is used twice")
-            continue
-        if russian and not _CYRILLIC.search(rest):
-            errors.append(f"{label}:{lineno}: q:{qid} has no Russian text on its line")
-        found.append((qid, rest.count("?")))
-        current = True
+        if inside and found:
+            qid, before = found[-1]
+            found[-1] = (qid, before + marks)
+        else:
+            errors.append(
+                f"{label}:{lineno}: a question mark outside a question of the section"
+            )
     if not found and not errors:
         errors.append(f"{label}: no questions between {START} and {END}")
     return found, errors
