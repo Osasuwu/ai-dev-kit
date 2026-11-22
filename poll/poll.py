@@ -1,31 +1,39 @@
 """Weekly poll: is a data rerun due? (#347)
 
 Usage:
-    python -I -B poll/poll.py decide [--state-dir DIR] [--events FILE] [--dry-run] [--now ISO]
+    python -I -B poll/poll.py decide [--state-dir DIR] [--events FILE] [--dry-run]
+                                     [--blocked REASON] [--now ISO]
     python -I -B poll/poll.py outcome done|failed "<note>" [--state-dir DIR] [--now ISO]
+    python -I -B poll/poll.py baseline "<why>" [--state-dir DIR] [--now ISO]
 
 `decide` reads the talk digest's state folder (default `~/briefings/aie/`) and nothing else
 there: `seen.txt` (one talk or video id per line), `state.json` (its `publishedAt`) and
 `runs.log`. It prints one line, `start <reason>`, `exit <reason>` or `skip <reason>`, and for
 `start` and `exit` appends the same decision to `runs.log`. `skip` means a decision was
 already recorded this ISO week (a catch-up run or a manual run after the weekly one); it
-writes nothing. `--dry-run` prints the decision and writes nothing.
+writes nothing. `--dry-run` prints the decision and writes nothing. `--blocked REASON` is for
+a week whose clone could not be updated: it records `exit clone not updated: REASON` instead
+of deciding, so the week still has its line.
 
 `outcome` closes the rerun the last `start` line opened, with `done` (the run ended in a draft
 pull request, or found nothing new) or `failed` (it stopped before that). Until one is
 recorded, `decide` starts no second rerun.
 
+`baseline` records the current `seen.txt` count as the new baseline, for when the digest's list
+was rebuilt and shrank. It is not a weekly decision and covers no event.
+
 A rerun is due when either holds:
-- at least NEW_TALKS_THRESHOLD lines were added to `seen.txt` since the baseline: the `seen`
-  count of the last `start` closed as `done`, or of the poll's first line when no rerun has
-  finished yet;
+- at least NEW_TALKS_THRESHOLD ids were added to `seen.txt` since the baseline: the `seen`
+  count of the latest `baseline` line or `start` closed as `done`, or of the poll's first
+  line when there is neither;
 - an event in `events.json` ended WEEKS_AFTER_EVENT weeks ago or more, that moment falls
   after the poll's first line, and no rerun started since then has finished.
 
-A failed rerun moves neither: its talks still count as new and its events stay due.
+A failed rerun moves neither: its talks still count as new and its events stay due. Dates and
+ISO weeks are UTC.
 
 runs.log lines written here are tab-separated:
-    <UTC time>  poll  <start|exit|done|failed>  seen=<count or ->  <reason>
+    <UTC time>  poll  <start|exit|done|failed|baseline>  seen=<count or ->  <reason>
 Lines whose second field is not `poll` belong to other writers and are ignored.
 """
 
@@ -40,11 +48,11 @@ from typing import NamedTuple
 
 NEW_TALKS_THRESHOLD = 100
 WEEKS_AFTER_EVENT = 4
-STALE_DIGEST_DAYS = 21
+QUIET_CORPUS_DAYS = 21
 
 DEFAULT_STATE_DIR = Path("~/briefings/aie")
 DEFAULT_EVENTS = Path(__file__).with_name("events.json")
-KINDS = ("start", "exit", "done", "failed")
+KINDS = ("start", "exit", "done", "failed", "baseline")
 
 
 class Line(NamedTuple):
@@ -87,7 +95,8 @@ def count_seen(path: Path) -> int | None:
     )
 
 
-def digest_note(path: Path, today: date) -> str | None:
+def corpus_note(path: Path, today: date) -> str | None:
+    """A note when the upstream corpus the digest copies has not published for a while."""
     try:
         published = parse_date(
             json.loads(path.read_text(encoding="utf-8"))["publishedAt"]
@@ -97,8 +106,8 @@ def digest_note(path: Path, today: date) -> str | None:
     if published is None:
         return "state.json has no readable publishedAt"
     age = (today - published).days
-    if age > STALE_DIGEST_DAYS:
-        return f"digest last published {published} ({age} days ago)"
+    if age > QUIET_CORPUS_DAYS:
+        return f"upstream corpus last published {published} ({age} days ago)"
     return None
 
 
@@ -146,7 +155,8 @@ def decide(
             " record one with poll.py outcome done|failed"
         )
     finished = finished_starts(lines)
-    base = finished[-1] if finished else counted[0]
+    anchors = [line for line in lines if line.kind == "baseline" or line in finished]
+    base = anchors[-1] if anchors else counted[0]
     if seen < base.seen:
         return "exit", (
             f"seen.txt shrank from {base.seen} to {seen} since {base.when};"
@@ -215,8 +225,10 @@ def run_decide(args) -> int:
         kind, reason = "exit", str(err)
     else:
         kind, reason = decide(seen, lines, events, today)
+    if args.blocked is not None and kind != "skip":
+        kind, reason = "exit", f"clone not updated: {args.blocked}"
     if kind != "skip":
-        notes = [digest_note(state / "state.json", today)]
+        notes = [corpus_note(state / "state.json", today)]
         if events and not any(end > today for _, end in events):
             notes.append(f"events.json lists no event ending after {today}")
         reason = "; ".join([reason] + [n for n in notes if n])
@@ -239,20 +251,34 @@ def run_outcome(args) -> int:
     return 0
 
 
+def run_baseline(args) -> int:
+    state = args.state_dir.expanduser()
+    seen = count_seen(state / "seen.txt")
+    if seen is None:
+        print(f"seen.txt not found in {state}", file=sys.stderr)
+        return 2
+    append(state / "runs.log", parse_now(args.now), "baseline", seen, args.why)
+    return 0
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
     d = sub.add_parser("decide")
     d.add_argument("--events", type=Path, default=DEFAULT_EVENTS)
     d.add_argument("--dry-run", action="store_true")
+    d.add_argument("--blocked", metavar="REASON", help="record the week as not decided")
     o = sub.add_parser("outcome")
     o.add_argument("result", choices=("done", "failed"))
     o.add_argument("note")
-    for p in (d, o):
+    b = sub.add_parser("baseline")
+    b.add_argument("why")
+    for p in (d, o, b):
         p.add_argument("--state-dir", type=Path, default=DEFAULT_STATE_DIR)
         p.add_argument("--now", help="ISO time to decide at (tests); default: now")
     args = parser.parse_args(argv)
-    return run_decide(args) if args.command == "decide" else run_outcome(args)
+    run = {"decide": run_decide, "outcome": run_outcome, "baseline": run_baseline}
+    return run[args.command](args)
 
 
 if __name__ == "__main__":

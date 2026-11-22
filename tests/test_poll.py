@@ -103,10 +103,12 @@ def test_exits_below_threshold_and_records_why(tmp_path, capsys):
 def test_starts_four_weeks_after_an_event_ends(tmp_path, capsys):
     events = [{"id": "conference:x/2026", "end": "2026-11-12"}] + FUTURE
     state = make_state(tmp_path, 1010, log=INSTALL)
-    # 2026-11-12 + 4 weeks = 2026-12-10: not due on the 7th, due on the 14th.
-    run(tmp_path, state, "2026-12-07T09:00:00Z", events=events)
-    assert capsys.readouterr().out.startswith("exit ")
-    run(tmp_path, state, "2026-12-14T09:00:00Z", events=events)
+    # 2026-11-12 + 4 weeks = 2026-12-10: not due on the 9th, due on the 10th.
+    run(tmp_path, state, "2026-12-09T09:00:00Z", events=events, extra=["--dry-run"])
+    assert capsys.readouterr().out == (
+        "exit 10 new talks since 2026-11-23 (threshold 100); no event due\n"
+    )
+    run(tmp_path, state, "2026-12-10T09:00:00Z", events=events)
     assert capsys.readouterr().out == (
         "start conference:x/2026 ended 2026-11-12, due 2026-12-10;"
         " 10 new talks since 2026-11-23 (threshold 100)\n"
@@ -115,6 +117,16 @@ def test_starts_four_weeks_after_an_event_ends(tmp_path, capsys):
 
 def test_event_due_before_the_poll_was_installed_does_not_start(tmp_path, capsys):
     events = [{"id": "conference:old/2026", "end": "2026-10-01"}] + FUTURE
+    state = make_state(tmp_path, 1010, log=INSTALL)
+    run(tmp_path, state, "2026-11-30T09:00:00Z", events=events)
+    assert capsys.readouterr().out == (
+        "exit 10 new talks since 2026-11-23 (threshold 100); no event due\n"
+    )
+
+
+def test_event_due_on_the_install_day_does_not_start(tmp_path, capsys):
+    # 2026-10-26 + 4 weeks = 2026-11-23, the day of the poll's first line.
+    events = [{"id": "conference:edge/2026", "end": "2026-10-26"}] + FUTURE
     state = make_state(tmp_path, 1010, log=INSTALL)
     run(tmp_path, state, "2026-11-30T09:00:00Z", events=events)
     assert capsys.readouterr().out == (
@@ -171,6 +183,28 @@ def test_second_run_in_the_same_week_writes_nothing(tmp_path, capsys):
     assert log_lines(state) == [INSTALL.rstrip("\n")]
 
 
+def test_week_is_the_iso_week_across_a_year_boundary(tmp_path, capsys):
+    # 2026-12-28 and 2027-01-03 are both in ISO week 2026-W53; 2027-01-04 is 2027-W01.
+    log = "2026-12-28T09:00:00Z\tpoll\texit\tseen=1000\tfirst poll\n"
+    state = make_state(tmp_path, 1010, published="2027-01-01T10:00:00Z", log=log)
+    run(tmp_path, state, "2027-01-03T09:00:00Z")
+    assert capsys.readouterr().out == "skip already decided this week (2026-12-28)\n"
+    run(tmp_path, state, "2027-01-04T09:00:00Z", extra=["--dry-run"])
+    assert capsys.readouterr().out == (
+        "exit 10 new talks since 2026-12-28 (threshold 100); no event due\n"
+    )
+
+
+def test_same_week_number_in_another_year_is_not_this_week(tmp_path, capsys):
+    # 2026-01-05 is 2026-W02; 2027-01-11 is 2027-W02.
+    log = "2026-01-05T09:00:00Z\tpoll\texit\tseen=1000\tfirst poll\n"
+    state = make_state(tmp_path, 1010, published="2027-01-08T10:00:00Z", log=log)
+    run(tmp_path, state, "2027-01-11T09:00:00Z", extra=["--dry-run"])
+    assert capsys.readouterr().out == (
+        "exit 10 new talks since 2026-01-05 (threshold 100); no event due\n"
+    )
+
+
 def test_seen_list_that_shrank_exits_without_starting(tmp_path, capsys):
     state = make_state(tmp_path, 900, log=INSTALL)
     run(tmp_path, state, "2026-11-30T09:00:00Z")
@@ -190,22 +224,63 @@ def test_missing_seen_list_exits_and_records_why(tmp_path, capsys):
     )
 
 
-def test_stale_digest_and_stale_event_list_are_named_in_the_reason(tmp_path, capsys):
+def test_quiet_corpus_and_stale_event_list_are_named_in_the_reason(tmp_path, capsys):
     events = [{"id": "conference:x/2026", "end": "2026-10-01"}]
     state = make_state(tmp_path, 1010, published="2026-11-01T10:00:00Z", log=INSTALL)
     run(tmp_path, state, "2026-11-30T09:00:00Z", events=events)
     assert capsys.readouterr().out == (
         "exit 10 new talks since 2026-11-23 (threshold 100); no event due;"
-        " digest last published 2026-11-01 (29 days ago);"
+        " upstream corpus last published 2026-11-01 (29 days ago);"
         " events.json lists no event ending after 2026-11-30\n"
     )
 
 
-def test_fresh_digest_adds_no_note(tmp_path, capsys):
+def test_recent_corpus_adds_no_note(tmp_path, capsys):
     state = make_state(tmp_path, 1010, published="2026-11-09T10:00:00Z", log=INSTALL)
     run(tmp_path, state, "2026-11-30T09:00:00Z")
     assert capsys.readouterr().out == (
         "exit 10 new talks since 2026-11-23 (threshold 100); no event due\n"
+    )
+
+
+def test_blocked_update_still_records_the_week(tmp_path, capsys):
+    state = make_state(tmp_path, 1100, log=INSTALL)
+    run(
+        tmp_path,
+        state,
+        "2026-11-30T09:00:00Z",
+        extra=["--blocked", "git switch: dirty"],
+    )
+    reason = "clone not updated: git switch: dirty"
+    assert capsys.readouterr().out == f"exit {reason}\n"
+    assert (
+        log_lines(state)[-1] == f"2026-11-30T09:00:00Z\tpoll\texit\tseen=1100\t{reason}"
+    )
+    run(tmp_path, state, "2026-12-01T09:00:00Z", extra=["--blocked", "again"])
+    assert capsys.readouterr().out == "skip already decided this week (2026-11-30)\n"
+
+
+def test_baseline_resets_a_shrunk_seen_list(tmp_path, capsys):
+    state = make_state(tmp_path, 900, log=INSTALL)
+    rc = poll.main(
+        [
+            "baseline",
+            "seen.txt rebuilt",
+            "--state-dir",
+            str(state),
+            "--now",
+            "2026-11-30T08:00:00Z",
+        ]
+    )
+    assert rc == 0
+    assert (
+        log_lines(state)[-1]
+        == "2026-11-30T08:00:00Z\tpoll\tbaseline\tseen=900\tseen.txt rebuilt"
+    )
+    # A baseline line is not a weekly decision: the same week still decides.
+    run(tmp_path, state, "2026-11-30T09:00:00Z")
+    assert capsys.readouterr().out == (
+        "exit 0 new talks since 2026-11-30 (threshold 100); no event due\n"
     )
 
 
@@ -276,7 +351,7 @@ def test_stated_thresholds(tmp_path):
     assert (
         poll.NEW_TALKS_THRESHOLD,
         poll.WEEKS_AFTER_EVENT,
-        poll.STALE_DIGEST_DAYS,
+        poll.QUIET_CORPUS_DAYS,
     ) == (
         100,
         4,
@@ -286,7 +361,7 @@ def test_stated_thresholds(tmp_path):
     for line in (
         "- **New talks:** 100",
         "- **Weeks after an event ends:** 4",
-        "- **Digest stale after:** 21 days",
+        "- **Corpus quiet after:** 21 days",
     ):
         assert line in readme.splitlines()
 
