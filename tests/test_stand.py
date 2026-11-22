@@ -222,6 +222,19 @@ def test_setup_refuses_a_folder_that_is_not_throwaway(
     assert target.exists() == existed
 
 
+def test_setup_refuses_a_unc_path_before_resolving_it(tmp_path, real_home, monkeypatch):
+    """resolve() on \\\\server\\share looks the server up, which can hang for the SMB
+    timeout: the spelling alone is enough to refuse."""
+
+    def no_lookup(self, *args, **kwargs):
+        raise AssertionError(f"resolve() called on {self}")
+
+    monkeypatch.setattr(Path, "resolve", no_lookup)
+
+    with pytest.raises(stand.StandError, match="UNC or device path"):
+        stand.setup(Path("\\\\fileserver\\share\\stand"), "claude-code")
+
+
 def test_setup_refuses_a_non_empty_folder_without_the_marker(tmp_path, real_home):
     target = tmp_path / "work"
     target.mkdir()
@@ -310,16 +323,22 @@ def test_reset_removes_links_in_the_stand_and_not_what_they_point_at(
     assert stand.check(target).reasons == []
 
 
+@pytest.mark.parametrize("where", ["link", "sub/link"], ids=["top", "nested"])
 def test_reset_that_fails_partway_touches_no_link_target_and_can_run_again(
-    tmp_path, real_home, monkeypatch
+    tmp_path, real_home, monkeypatch, where
 ):
+    """The read-only retry runs on Windows; WINDOWS is forced on so that CI's Linux runs it
+    too. A top-level link is deleted by reset itself, a nested one through rmtree."""
+    monkeypatch.setattr(stand, "WINDOWS", True)
     target = tmp_path / "stand"
     stand.setup(target, "claude-code")
     real_file = real_home / ".claude" / "CLAUDE.md"
     real_file.chmod(stat.S_IREAD)
     mode = real_file.stat().st_mode
+    link = target / where
+    link.parent.mkdir(exist_ok=True)
     try:
-        (target / "link").symlink_to(real_file)
+        link.symlink_to(real_file)
     except OSError:
         pytest.skip("no file symlinks on this Windows account (no developer mode)")
     unlink = os.unlink
@@ -348,7 +367,7 @@ def test_reset_that_fails_partway_touches_no_link_target_and_can_run_again(
     monkeypatch.setattr(os, "unlink", unlink)
     stand.reset(target)
 
-    assert not (target / "link").exists()
+    assert not link.exists()
     assert stand.check(target).reasons == []
 
 
@@ -397,6 +416,20 @@ def _remove_user_rules(target, repo, home):
 def _add_user_agent_file(target, repo, home):
     (home / ".claude" / "agents").mkdir()
     (home / ".claude" / "agents" / "helper.md").write_text("x\n")
+
+
+def _add_user_settings_file(target, repo, home):
+    (home / ".claude" / "settings.local.json").write_text("{}\n")
+
+
+def _add_user_codex_skill(target, repo, home):
+    (home / ".codex" / "skills" / "mine").mkdir(parents=True)
+    (home / ".codex" / "skills" / "mine" / "SKILL.md").write_text("x\n")
+
+
+def _add_user_command_named_system(target, repo, home):
+    (home / ".claude" / "commands" / ".system").mkdir(parents=True)
+    (home / ".claude" / "commands" / ".system" / "x.md").write_text("x\n")
 
 
 def _add_audit_branch(target, repo, home):
@@ -459,6 +492,12 @@ def _add_real_agent_file(target, repo, home):
     (real / ".claude" / "agents" / "helper.md").write_text("x\n")
 
 
+def _add_real_codex_skill(target, repo, home):
+    real = Path(os.environ["HOME"])
+    (real / ".codex" / "skills" / "mine").mkdir(parents=True)
+    (real / ".codex" / "skills" / "mine" / "SKILL.md").write_text("x\n")
+
+
 def _add_real_mcp_server(target, repo, home):
     real = Path(os.environ["HOME"])
     (real / ".claude.json").write_text('{"mcpServers": {"x": {"command": "x"}}}\n')
@@ -509,6 +548,18 @@ DEPARTURES = [
         _add_user_agent_file,
         ["agent config file added at user level: .claude/agents/helper.md"],
     ),
+    (
+        _add_user_settings_file,
+        ["agent config file added at user level: .claude/settings.local.json"],
+    ),
+    (
+        _add_user_codex_skill,
+        ["agent config file added at user level: .codex/skills/mine/SKILL.md"],
+    ),
+    (
+        _add_user_command_named_system,
+        ["agent config file added at user level: .claude/commands/.system/x.md"],
+    ),
     (_add_audit_branch, ["branch exists: ai-dev-kit/audit-2026-11-22"]),
     (
         _stay_on_audit_branch,
@@ -533,6 +584,7 @@ DEPARTURES = [
     (_leave_a_stash, ["stash exists in repo"]),
     (_change_real_config, ["real user-level config changed: .claude/settings.json"]),
     (_add_real_agent_file, ["real user-level config changed: .claude/agents"]),
+    (_add_real_codex_skill, ["real user-level config changed: .codex/skills"]),
     (_add_real_mcp_server, ["real user-level config changed: .claude.json"]),
     (_detach_head, ["repo HEAD detached"]),
     (_add_git_hook, ["git hook added: .git/hooks/pre-commit"]),
@@ -588,6 +640,20 @@ def test_check_ignores_what_the_real_harness_rewrites_itself(tmp_path, real_home
 
     assert report.reasons == []
     assert "Real user-level config since setup: unchanged" in report.lines
+
+
+def test_check_watches_a_real_claude_skill_folder_named_system(tmp_path, real_home):
+    """Only Codex owns skills/.system/; in Claude Code's skills it is the user's own."""
+    skill = real_home / ".claude" / "skills" / ".system" / "s" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("v1\n")
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    skill.write_text("v2\n")
+
+    report = stand.check(target)
+
+    assert report.reasons == ["real user-level config changed: .claude/skills"]
 
 
 def test_check_ignores_harness_runtime_files_and_the_audit_backup(tmp_path, real_home):

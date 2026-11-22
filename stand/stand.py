@@ -60,7 +60,9 @@ CLAUDE_WATCH = {
 }
 CODEX_WATCH = {
     "file": ("AGENTS.md", "AGENTS.override.md", "config.toml", "hooks.json"),
-    "dir": ("prompts", "rules", "skills"),
+    "dir": ("prompts", "rules"),
+    # A folder like "dir", less skills/.system/: Codex installs its own skills there.
+    "skills": ("skills",),
 }
 HOME_WATCH = {
     "file": (".gitconfig", ".config/git/config"),
@@ -75,10 +77,13 @@ USER_MCP_FILES = (".claude.json", ".claude/.claude.json")
 QUOTES = "'‘’‚‛"
 
 # Where each harness reads user-level config: the same places the real-config watch hashes.
-# Anything else the harness writes (plugins/, its own skills under skills/.system/) is
+# Anything else the harness writes (plugins/, Codex's own skills under skills/.system/) is
 # runtime, not config.
 USER_CONFIG = {".claude": CLAUDE_WATCH, ".codex": CODEX_WATCH}
 HARNESS_OWNED = ".system"
+DEVICE_PREFIXES = ("\\\\", "//")
+# The read-only retry in reset applies on Windows only; a constant, so tests can reach it.
+WINDOWS = os.name == "nt"
 REPO_AGENT_CONFIG_NAMES = {
     "CLAUDE.md",
     "CLAUDE.local.md",
@@ -173,13 +178,18 @@ def _guard(target: Path) -> Path:
             "this is a stand shell (AI_DEV_KIT_STAND is set): run stand.py from a new shell "
             "that has not sourced env.sh or env.ps1"
         )
-    resolved = target.expanduser().resolve()
     # \\?\C:\... and \\localhost\C$\... name the same folders as C:\... but compare unequal
-    # as strings, so every guard below would miss them.
-    if any(str(p).startswith(("\\\\", "//")) for p in (target, resolved)):
-        raise StandError(
-            f"{target} is a UNC or device path: use a plain drive path (C:\\... or /...)"
-        )
+    # as strings, so every guard below would miss them. The target is checked before
+    # resolve(), which would look a \\server\ name up on the network first; the resolved
+    # path, for a drive mapped to a share.
+    device = StandError(
+        f"{target} is a UNC or device path: use a plain drive path (C:\\... or /...)"
+    )
+    if str(target).startswith(DEVICE_PREFIXES):
+        raise device
+    resolved = target.expanduser().resolve()
+    if str(resolved).startswith(DEVICE_PREFIXES):
+        raise device
     if any(q in str(resolved) for q in QUOTES):
         raise StandError(
             f"{resolved}: a path with a quote in it cannot go into env.sh or env.ps1"
@@ -212,14 +222,15 @@ def _digest(path: Path, kind: str) -> str | None:
     file. None when there is nothing there."""
     if kind == "file":
         return _hash(path)
-    if kind == "dir":
+    if kind in ("dir", "skills"):
         if not path.is_dir():
             return None
         digest = hashlib.sha256()
         for child in sorted(
             p
             for p in path.rglob("*")
-            if p.is_file() and p.relative_to(path).parts[0] != HARNESS_OWNED
+            if p.is_file()
+            and (kind == "dir" or p.relative_to(path).parts[0] != HARNESS_OWNED)
         ):
             digest.update(child.relative_to(path).as_posix().encode() + b"\0")
             digest.update((_hash(child) or "").encode() + b"\0")
@@ -434,7 +445,7 @@ def _clear_readonly(func, path, exc_info):
     raised: a chmod through a link would change a file outside the stand."""
     exc = exc_info if isinstance(exc_info, BaseException) else exc_info[1]
     if (
-        os.name == "nt"
+        WINDOWS
         and func in (os.unlink, os.remove)
         and isinstance(exc, PermissionError)
         and not _is_link(Path(path))
@@ -499,7 +510,9 @@ def _is_user_agent_config(rel: str) -> bool:
         return False
     if len(parts) == 2:
         return parts[1] in watch.get("file", ())
-    return parts[1] in watch.get("dir", ()) and parts[2] != HARNESS_OWNED
+    if parts[1] in watch.get("skills", ()):
+        return parts[2] != HARNESS_OWNED
+    return parts[1] in watch.get("dir", ())
 
 
 def _is_agent_memory(parts: list[str]) -> bool:
