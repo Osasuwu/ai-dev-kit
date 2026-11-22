@@ -21,7 +21,7 @@ auto-merge is off: every merge is a human's manual act.
 | Check | Workflow | Looks at |
 |---|---|---|
 | `tests` | `tests.yml` | `python -m pytest tests`, the whole suite |
-| `structure-gate` | `structure-gate.yml` | class docs and the incident dataset, per `tests/structure_gate.py` |
+| `structure-gate` | `structure-gate.yml` | class docs, the incident dataset and the practice cards (`cards/`, format in `cards/README.md`), per `tests/structure_gate.py`; the log lists the card files checked |
 | `gitleaks` | `gitleaks.yml` | secrets (`.gitleaks.toml`) and personal literals in the working tree |
 | `ruff` | `lint.yml` | `ruff check .` and `ruff format --check .` over every Python file, on every PR and push to `main`; the version is pinned in `.github/ruff-requirements.txt` |
 | `link-check` (not required) | `link-check.yml` | links in changed `.md` files under `.github/hold-paths.json`, via `scripts/check_links.py`: alive, dead or not verified; fails only on dead; never judges the page's content |

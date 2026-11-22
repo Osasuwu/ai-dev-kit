@@ -540,6 +540,9 @@ CORPUS = [
     "docs/adr-notes/z.md",
     "incidents/incidents.csv",
     "incidents/sub/n.md",
+    "cards/README.md",
+    "cards/run-the-app.md",
+    "cards/notes.txt",
     "notes/a.md",
     "private/keep.md",
     "private/open/a.md",
@@ -563,6 +566,9 @@ def test_selection_is_the_hold_definition_narrowed_to_markdown_under_the_shipped
         "docs/classes/alpha.md",
         "docs/adr-notes/z.md",
         "incidents/sub/n.md",
+        # Cards and their format doc (#340): a dead link in a changed card turns link-check red.
+        "cards/README.md",
+        "cards/run-the-app.md",
     }
 
 
