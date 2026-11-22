@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 
@@ -369,20 +370,30 @@ def test_stated_thresholds(tmp_path):
 def test_task_prompt_hardens_every_git_call_and_runs_the_copied_poll():
     # A file an agent planted in the clone must not run through the task's own commands.
     text = (POLL / "task.md").read_text(encoding="utf-8")
-    git_calls = [x for x in text.split("`") if x.startswith("git ")]
-    assert len(git_calls) == 9
-    bad = [
-        x
-        for x in git_calls
-        if not x.startswith(
-            "git -C ~/aie-poll/ai-dev-kit -c core.fsmonitor=false -c core.hooksPath=<empty> "
-        )
-    ]
-    assert bad == []
-    runs = [x for x in text.split("`") if x.startswith("python ")]
-    assert len(runs) == 5
+    spans = text.split("`")[1::2]
+    hardened = "git -C ~/aie-poll/ai-dev-kit -c core.fsmonitor=false -c core.hooksPath=<empty> "
+    # A git command starts a span or follows a shell separator (`cd x && git ...`); every
+    # one is the hardened form. Quoted reasons such as "git fetch: ..." are not commands.
+    command = re.compile(r"(?:^|[;&|(]\s*)git\s")
+    git_spans = [x for x in spans if command.search(x)]
+    assert len(git_spans) == 9
+    assert [x for x in git_spans if x.count(hardened) != len(command.findall(x))] == []
+    runs = [x for x in spans if "python" in x]
+    assert len(runs) == 6
     assert [x for x in runs if not x.startswith("python -I -B <poll>/poll.py ")] == []
-    assert "status --porcelain --ignored`" in text
+    assert hardened + "status --porcelain --ignored" in spans
+
+
+def test_task_prompt_moves_a_tamper_stopped_clone_aside_without_git():
+    # After a tamper stop no later week may run git in the clone, and nothing is recorded.
+    text = (POLL / "task.md").read_text(encoding="utf-8")
+    tamper = text[
+        text.index("**A tamper stop:**") : text.index("**A draft pull request:**")
+    ]
+    tamper = " ".join(tamper.split())
+    assert "Record no outcome, commit nothing and run no further git command." in tamper
+    assert "`mv ~/aie-poll/ai-dev-kit ~/aie-poll/held-<today, YYYY-MM-DD>`" in tamper
+    assert "<poll>/poll.py" not in tamper
 
 
 def test_shipped_event_list_is_well_formed():

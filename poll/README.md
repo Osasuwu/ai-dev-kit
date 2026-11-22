@@ -54,7 +54,9 @@ One line per decision, tab-separated:
 - `start` and `exit` — the weekly decision. At most one per ISO week: a second run in the
   same week (a catch-up, a manual run) prints `skip` and writes nothing. A week whose clone
   could not be updated still gets its line: the task runs `poll.py decide --blocked
-  "<why>"`, which records `exit clone not updated: <why>`.
+  "<why>"`, which records `exit clone not updated: <why>`. Two cases write no line, since the
+  task then has no `poll.py` to run: the clone is missing (after a tamper stop it is moved
+  aside), or the poll cannot be copied out of it.
 - `done` and `failed` — the outcome of the rerun the last `start` opened, written by the task
   (`poll.py outcome done|failed "<note>"`). While a `start` has no outcome, every decision is
   `exit` with that as its reason, so a crashed run cannot start a second one. A `failed` rerun
@@ -65,31 +67,39 @@ Other writers' lines (the digest's own) are skipped. Lines are only ever appende
 
 ## When a line needs a person
 
-- **A rerun that never recorded its outcome.** Either a tamper stop (the rerun stopped at
-  its snapshot, an unchanged check, `commit.md`'s path list or `commit_guard.py`; the task's
-  last line starts `held:` and names what changed), or the session stopped part way: the app
-  closed, or it waited on a permission prompt nobody answered. Every week then exits with
+- **A tamper stop.** The rerun stopped at its snapshot, an unchanged check, `commit.md`'s
+  path list or `commit_guard.py`, or before it had a snapshot line. The task's last line
+  starts `held:` and names what changed. It records no outcome, commits nothing, and moves
+  the clone, as it is, to `~/aie-poll/held-<date>` without running git in it, since a changed
+  git config can run code through any git command. Every later week ends with "clone
+  missing" and writes no line. Look at the held folder, outside the task (its git config,
+  hooks, Claude Code settings, agents, files the run left), and find the cause. Then clone
+  the repo afresh to `~/aie-poll/ai-dev-kit`, do its setup (below), and from a clean
+  checkout of `main` record `python -I -B poll/poll.py outcome failed "<why>"`.
+- **A rerun that never recorded its outcome otherwise.** The session stopped part way: the
+  app closed, or it waited on a permission prompt nobody answered. Every week then exits with
   `rerun started <date> has no outcome line`, or `clone not updated` while the clone is
-  dirty. After a tamper stop, find and undo the change first (the clone, git config, Claude
-  Code settings, agents); the task leaves the clone untouched for that. Then, from a clean
-  checkout of `main`, record the outcome: `python -I -B poll/poll.py outcome failed "<why>"`,
-  or `outcome done "<pull request URL>"` when the run did finish. A stopped run's work is on
-  its `rerun/<date>` branch in the task's clone, or uncommitted there after a tamper stop.
+  dirty. Check the clone first as above. Then, from a clean checkout of `main`, record the
+  outcome: `outcome failed "<why>"`, or `outcome done "<pull request URL>"` when the run did
+  finish. A stopped run's work is on its `rerun/<date>` branch in the task's clone.
 - **`seen.txt shrank`.** The digest's list was rebuilt or trimmed, and a count since the old
   baseline would be wrong. Every week exits until a new baseline is set:
   `python -I -B poll/poll.py baseline "<why>"` records today's count. Events are unaffected.
 - **`clone not updated`.** The task's clone could not be fetched or switched to
   `origin/main`, or holds uncommitted or ignored files. Its reason names the command. A
-  failed rerun's work is kept on its `rerun/<date>` branch (`task.md` step 4), so the cause
-  is a tamper stop (above), no network, or a change made in the clone by hand. The task never
-  cleans the clone itself: an ignored file such as `.claude/settings.local.json` would load
-  into the next session.
+  failed rerun's work is kept on its `rerun/<date>` branch (`task.md` step 4) and a
+  tamper-stopped clone is moved aside, so the cause is no network, a session that stopped
+  part way, or a change made in the clone by hand. The task never cleans the clone itself:
+  the files are what a person needs to see.
 
 The task runs `poll.py` from a copy it takes out of `origin/main` each week, never from the
 clone's working tree, and runs every git command in the clone with
 `-c core.fsmonitor=false -c core.hooksPath=<empty>` (an empty folder), as the rerun's commit
-step does. A file the rerun's agents wrote into the clone therefore runs no code in the
-task's session by way of the poll.
+step does. That stops planted hooks and file monitors, not code that git config runs
+(a credential helper, `core.sshCommand`, a clean or smudge filter;
+[`../data/pipeline/README.md`](../data/pipeline/README.md) § What this split does not stop).
+The rerun's snapshot and unchanged checks catch a changed config; after one of them stops a
+run, the task moves the clone aside so no later week runs git in it.
 
 ## Setup, once per device
 
@@ -98,7 +108,9 @@ task's session by way of the poll.
 2. The rerun's own setup ([`../data/pipeline/README.md`](../data/pipeline/README.md) § Setup),
    done for that clone.
 3. A desktop scheduled task: weekly, Monday 09:00 local time, whose prompt is the text of
-   [`task.md`](task.md) below its heading. It runs unattended, so a tool call that asks for
+   [`task.md`](task.md) below its heading. Its working folder is `~/aie-poll`, never the
+   clone: a session loads the Claude Code settings, hooks and agents of the folder it starts
+   in, before the task can check the clone. It runs unattended, so a tool call that asks for
    permission stalls it; see *When a line needs a person*.
 
 ## A missed week
