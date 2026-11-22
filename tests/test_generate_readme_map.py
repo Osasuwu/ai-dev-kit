@@ -18,7 +18,14 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-from generate_readme_map import END, START, main, render_block, render_readme  # noqa: E402
+from generate_readme_map import (  # noqa: E402
+    END,
+    START,
+    _class_docs,
+    main,
+    render_block,
+    render_readme,
+)
 
 REPO_ROOT = Path(__file__).parent.parent
 VALID = Path(__file__).parent / "fixtures" / "structure_gate" / "valid"
@@ -181,14 +188,9 @@ def test_real_readme_equals_the_generators_output():
 
 
 def test_every_incident_row_names_a_class_that_has_a_doc():
-    # A row whose class has no doc belongs to nothing a reader can open, and no class row on the
-    # map counts it (#342 found four such rows).
-    docs = {
-        line.split(":", 1)[1].strip()
-        for path in (REPO_ROOT / "docs/classes").glob("*.md")
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.startswith("class:")
-    }
+    # A row whose class has no doc belongs to no doc a reader can open (#342 found four such
+    # rows). The classes are read from the frontmatter, the way the generator reads them.
+    docs = {fields["class"] for _, fields in _class_docs(REPO_ROOT)}
     text = (REPO_ROOT / DATASET).read_text(encoding="utf-8")
     orphans = sorted(
         f"{row['id']}:{row['class']}"

@@ -1,7 +1,7 @@
 ---
 kind: habit
 why: An agent left to run for hours with no checkable end condition and no budget stops when it believes it is done, or runs on, and afterwards nobody can tell which.
-applies_when: you hand an agent a task that runs for hours or unattended, rather than one you watch step by step
+applies_when: you hand an agent a one-off task that runs for hours, rather than one you watch step by step or a chore that recurs on a schedule
 last_reviewed: 2026-11-22
 ---
 
@@ -9,14 +9,17 @@ last_reviewed: 2026-11-22
 
 ## Check
 
-Open the brief of your last long or unattended agent run. It should state three things before
-the work starts: done as a condition someone other than the agent can check (a named test turns
-green, a scanner reports nothing), a budget in tokens, time or money, and the points where the
-run's progress is compared with the goal it started from. Then look at how the run ended. It
-should be one of: the condition was met and checked, the budget ran out, or the agent asked for
-help, and you were told in each case, success included. A run that ended because the agent said
-it was finished fails, and so does a brief whose done line describes steps instead of an
-outcome.
+Open the brief of your last long one-off agent task, such as a migration, a port or a large
+refactor. It should state three things before the work starts: done as an outcome someone other
+than the agent can check (the old and new suites agree, the migrated rows match), a budget in
+tokens, time or money, and the milestones where progress is compared with the goal file the
+task started from. Then look at the milestones themselves: was each one an actual comparison
+with the goal, made outside the main thread, or only a progress note from the agent? A brief
+whose done line describes steps instead of an outcome fails, and so does a task whose
+milestones were only the agent's own notes. Recurring chores are a different card
+([schedule agents for bounded chores](schedule-agents-for-bounded-chores.md)), and recording
+the stop reason of each run is another
+([cap and record each run](cap-and-record-each-run.md)).
 
 ## Learn
 

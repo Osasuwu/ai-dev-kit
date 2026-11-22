@@ -9,8 +9,8 @@ last_reviewed: 2026-11-22
 
 ## Check
 
-For Claude Code, read the resolved sandbox settings, either with `/sandbox` (the Config tab) or
-from the settings files:
+For Claude Code, read the resolved sandbox settings with `/sandbox` (the Config tab), which
+includes managed settings. The project and user files alone can be read with:
 
 ```
 jq '.sandbox' .claude/settings.json .claude/settings.local.json ~/.claude/settings.json 2>/dev/null
@@ -28,7 +28,9 @@ outbound traffic, DNS included, is default-deny.
   `allowUnsandboxedCommands: false`, so a blocked command cannot be retried outside the
   sandbox. List the writable paths under `sandbox.filesystem.allowWrite` and the reachable hosts
   under `sandbox.network.allowedDomains`; keep broad code hosts off the list where you can.
-- Deliver these keys through managed settings, so a setting inside the project cannot widen them.
+- Deliver these keys through managed settings, and also set the locks the sandboxing docs list
+  for them: list settings merge across scopes, so without a lock a project's settings can still
+  append writable paths or allowed hosts to the managed ones.
 - For unattended runs, use a container with an egress firewall, such as Claude Code's reference
   development container, and keep host secrets out of it.
 
@@ -49,7 +51,7 @@ outbound traffic, DNS included, is default-deny.
 
 - 2026-11-22: the sandbox covers shell commands only; file tools, MCP servers and hooks run outside it, and a command on the excluded list or retried with the sandbox off runs unsandboxed ([irreversible effects](../docs/classes/irreversible-effects.md)).
 - 2026-11-22: an allowed host can itself be the way out: allowing a broad domain such as a code host opens a path for exfiltration ([untrusted content steers the agent](../docs/classes/untrusted-content-steers-the-agent.md)).
-- 2026-11-22: the docs call it not a complete isolation boundary; a container used with an untrusted repository can still lose the agent's own credentials; and allowlists cost upkeep and fail legitimate commands. A network proxy outside the agent is complex and becomes a single point of failure, by the speakers' own account.
+- 2026-11-22: the docs call it not a complete isolation boundary; a container used with an untrusted repository can still lose the agent's own credentials; and allowlists cost upkeep and fail legitimate commands. A network proxy outside the agent adds a component to run, and a single point of failure.
 
 ## Guards
 
