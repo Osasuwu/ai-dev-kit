@@ -19,6 +19,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -77,6 +78,19 @@ def real_home(tmp_path, monkeypatch):
     for name in ("CLAUDE_CONFIG_DIR", "CODEX_HOME", "AI_DEV_KIT_STAND"):
         monkeypatch.delenv(name, raising=False)
     return home
+
+
+def make_dir_link(link: Path, target: Path) -> Path:
+    """A directory symlink; on Windows without symlink rights, a junction."""
+    try:
+        os.symlink(target, link, target_is_directory=True)
+    except OSError:
+        if os.name != "nt":
+            raise
+        import _winapi
+
+        _winapi.CreateJunction(str(target), str(link))
+    return link
 
 
 def snapshot(folder: Path) -> dict[str, str]:
@@ -166,6 +180,23 @@ REFUSALS = [
         "inside your real home",
     ),
     ("curly-quote", lambda tmp, home: tmp / "it’s", "quote"),
+    (
+        "device-spelling-of-real-config",
+        lambda tmp, home: Path("\\\\?\\" + str(home / ".claude" / "stand")),
+        "UNC or device path",
+    ),
+    (
+        "unc-spelling-of-real-config",
+        lambda tmp, home: Path(
+            "\\\\localhost\\" + str(home).replace(":", "$", 1) + "\\.claude\\stand"
+        ),
+        "UNC or device path",
+    ),
+    (
+        "link-into-real-config",
+        lambda tmp, home: make_dir_link(tmp / "link", home / ".claude") / "stand",
+        "real agent config",
+    ),
 ]
 
 
@@ -175,9 +206,11 @@ REFUSALS = [
 def test_setup_refuses_a_folder_that_is_not_throwaway(
     tmp_path, real_home, monkeypatch, make_target, reason
 ):
-    # A stand-in kit checkout under tmp: were the guard broken, setup would fill tmp, not
-    # this repo.
+    # A stand-in kit checkout under tmp, and tmp as the working folder: were the guard
+    # broken, setup would fill tmp, not this repo (a UNC spelling is a relative name on
+    # Linux).
     monkeypatch.setattr(stand, "KIT_ROOT", tmp_path / "kit")
+    monkeypatch.chdir(tmp_path)
     target = make_target(tmp_path, real_home)
     before_home = snapshot(real_home)
     existed = target.exists()
@@ -259,6 +292,64 @@ def test_reset_refuses_a_marked_folder_inside_the_real_config(tmp_path, real_hom
         stand.reset(target)
 
     assert snapshot(real_home) == before
+
+
+def test_reset_removes_links_in_the_stand_and_not_what_they_point_at(
+    tmp_path, real_home
+):
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    make_dir_link(target / "real-claude", real_home / ".claude")
+    make_dir_link(target / "home" / "real-home", real_home)
+    before = snapshot(real_home)
+
+    stand.reset(target)
+
+    assert snapshot(real_home) == before
+    assert not (target / "real-claude").exists()
+    assert stand.check(target).reasons == []
+
+
+def test_reset_that_fails_partway_touches_no_link_target_and_can_run_again(
+    tmp_path, real_home, monkeypatch
+):
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    real_file = real_home / ".claude" / "CLAUDE.md"
+    real_file.chmod(stat.S_IREAD)
+    mode = real_file.stat().st_mode
+    try:
+        (target / "link").symlink_to(real_file)
+    except OSError:
+        pytest.skip("no file symlinks on this Windows account (no developer mode)")
+    unlink = os.unlink
+
+    def refuse_the_link(path, *args, **kwargs):
+        if Path(path).name == "link":
+            raise PermissionError(13, "refused for the test", str(path))
+        return unlink(path, *args, **kwargs)
+
+    chmodded = []
+    chmod = os.chmod
+
+    def record_chmod(path, *args, **kwargs):
+        chmodded.append(Path(path).name)
+        return chmod(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", refuse_the_link)
+    monkeypatch.setattr(os, "chmod", record_chmod)
+    with pytest.raises(PermissionError):
+        stand.reset(target)
+    # The failed delete did not chmod the link: on POSIX (and on some Python versions on
+    # Windows) that changes the real file it points at.
+    assert "link" not in chmodded
+    assert real_file.stat().st_mode == mode
+
+    monkeypatch.setattr(os, "unlink", unlink)
+    stand.reset(target)
+
+    assert not (target / "link").exists()
+    assert stand.check(target).reasons == []
 
 
 def test_reset_returns_a_changed_stand_to_its_seeds(tmp_path, real_home):
@@ -480,15 +571,18 @@ def test_check_names_each_departure_from_the_seeded_state(
     assert report.lines[-1] == f"SEEDED STATE: no ({'; '.join(reasons)})"
 
 
-def test_check_ignores_the_real_claude_json_outside_its_mcp_servers(
-    tmp_path, real_home
-):
-    """Claude Code rewrites ~/.claude.json on every start; only its servers are config."""
+def test_check_ignores_what_the_real_harness_rewrites_itself(tmp_path, real_home):
+    """Claude Code rewrites ~/.claude.json on every start, and Codex its own skills under
+    skills/.system/: only the servers and the user's own skills are config."""
     state = real_home / ".claude.json"
     state.write_text('{"numStartups": 1, "mcpServers": {"a": {"command": "a"}}}\n')
+    system_skill = real_home / ".codex" / "skills" / ".system" / "s" / "SKILL.md"
+    system_skill.parent.mkdir(parents=True)
+    system_skill.write_text("v1\n")
     target = tmp_path / "stand"
     stand.setup(target, "claude-code")
     state.write_text('{"numStartups": 2, "mcpServers": {"a": {"command": "a"}}}\n')
+    system_skill.write_text("v2\n")
 
     report = stand.check(target)
 
@@ -503,6 +597,15 @@ def test_check_ignores_harness_runtime_files_and_the_audit_backup(tmp_path, real
     (home / ".claude" / "projects" / "p").mkdir(parents=True)
     (home / ".claude" / "projects" / "p" / "s.jsonl").write_text("{}\n")
     (home / ".claude" / ".claude.json").write_text("{}\n")
+    # What a harness installs itself: plugins and its own skills, config-named or not.
+    for rel in (
+        ".claude/plugins/marketplaces/m/.mcp.json",
+        ".claude/plugins/marketplaces/m/settings.json",
+        ".claude/plugins/cache/p/skills/s/SKILL.md",
+        ".codex/skills/.system/s/SKILL.md",
+    ):
+        (home / rel).parent.mkdir(parents=True, exist_ok=True)
+        (home / rel).write_text("{}\n")
     backup = home / "ai-dev-kit-backup" / "2026-11-22-1200"
     backup.mkdir(parents=True)
     (backup / "RESTORE.txt").write_text("git switch main\n")
@@ -626,17 +729,36 @@ def test_env_sh_points_every_config_location_at_the_stand(
     assert _assert_stand_env(target, out.splitlines()) == []
 
 
+def test_claude_code_launch_denies_the_planted_allow_rules():
+    """S08 and S09 stay in the stand's settings for the audit to find; the session itself
+    starts with them denied, and the README gives the same launch lines."""
+    seed = SEED_DIR / "claude-code" / "dot-claude" / "settings.json.seed"
+    allow = json.loads(seed.read_text(encoding="utf-8"))["permissions"]["allow"]
+    wildcards = [rule for rule in allow if rule.endswith(":*)")]
+    launch = stand.LAUNCH["claude-code"]
+    readme = (STAND_DIR / "README.md").read_text(encoding="utf-8")
+
+    assert wildcards == ["Bash(npx:*)", "Bash(uv run:*)"]
+    assert launch == 'claude --disallowedTools "Bash(npx:*)" "Bash(uv run:*)"'
+    assert f"`{launch}`" in readme
+    assert f"`{stand.LAUNCH['codex']}`" in readme
+
+
 def test_env_ps1_points_every_config_location_at_the_stand(
     tmp_path, real_home, monkeypatch
 ):
     shell = shutil.which("pwsh") or shutil.which("powershell")
     if shell is None:
         pytest.skip("no PowerShell here; GitHub's ubuntu runners have pwsh")
-    target = tmp_path / "stand"
+    # A non-ASCII stand path: Windows PowerShell 5.1 reads a script without a BOM in the
+    # ANSI code page and would garble it.
+    target = tmp_path / "ständ"
     stand.setup(target, "claude-code")
+    assert (target / "env.ps1").read_bytes().startswith(b"\xef\xbb\xbf")
     for name in TOKENS:
         monkeypatch.setenv(name, "should-be-unset")
     script = (
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
         f". '{target / 'env.ps1'}'; "
         + "; ".join(f"Write-Output $env:{name}" for name in ENV_PROBE)
         + "; Write-Output $env:GIT_CONFIG_NOSYSTEM; "
@@ -652,6 +774,7 @@ def test_env_ps1_points_every_config_location_at_the_stand(
         [shell, "-NoProfile", "-NonInteractive", "-Command", script],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     ).stdout
     lines = [line for line in out.splitlines() if line.strip()]

@@ -60,7 +60,7 @@ CLAUDE_WATCH = {
 }
 CODEX_WATCH = {
     "file": ("AGENTS.md", "AGENTS.override.md", "config.toml", "hooks.json"),
-    "dir": ("prompts", "rules"),
+    "dir": ("prompts", "rules", "skills"),
 }
 HOME_WATCH = {
     "file": (".gitconfig", ".config/git/config"),
@@ -74,25 +74,11 @@ GIT_FILES = ("config", "info/exclude")
 USER_MCP_FILES = (".claude.json", ".claude/.claude.json")
 QUOTES = "'‘’‚‛"
 
-AGENT_CONFIG_NAMES = {
-    "CLAUDE.md",
-    "CLAUDE.local.md",
-    "AGENTS.md",
-    "AGENTS.override.md",
-    "settings.json",
-    "settings.local.json",
-    "config.toml",
-    ".mcp.json",
-}
-USER_AGENT_CONFIG_DIRS = {
-    "hooks",
-    "commands",
-    "agents",
-    "skills",
-    "rules",
-    "output-styles",
-    "prompts",
-}
+# Where each harness reads user-level config: the same places the real-config watch hashes.
+# Anything else the harness writes (plugins/, its own skills under skills/.system/) is
+# runtime, not config.
+USER_CONFIG = {".claude": CLAUDE_WATCH, ".codex": CODEX_WATCH}
+HARNESS_OWNED = ".system"
 REPO_AGENT_CONFIG_NAMES = {
     "CLAUDE.md",
     "CLAUDE.local.md",
@@ -129,8 +115,11 @@ TOKEN_VARS = (
     "GH_ENTERPRISE_TOKEN",
     "GITHUB_ENTERPRISE_TOKEN",
 )
+# The planted allow rules (S08, S09) stay in the stand's settings for the audit to read, but
+# the session itself is started with them denied: deny beats allow, so an agent cannot run
+# npx or uv run unprompted with the maintainer's file access.
 LAUNCH = {
-    "claude-code": "claude",
+    "claude-code": 'claude --disallowedTools "Bash(npx:*)" "Bash(uv run:*)"',
     "codex": "codex -s workspace-write -a on-request",
 }
 
@@ -185,6 +174,12 @@ def _guard(target: Path) -> Path:
             "that has not sourced env.sh or env.ps1"
         )
     resolved = target.expanduser().resolve()
+    # \\?\C:\... and \\localhost\C$\... name the same folders as C:\... but compare unequal
+    # as strings, so every guard below would miss them.
+    if any(str(p).startswith(("\\\\", "//")) for p in (target, resolved)):
+        raise StandError(
+            f"{target} is a UNC or device path: use a plain drive path (C:\\... or /...)"
+        )
     if any(q in str(resolved) for q in QUOTES):
         raise StandError(
             f"{resolved}: a path with a quote in it cannot go into env.sh or env.ps1"
@@ -221,7 +216,11 @@ def _digest(path: Path, kind: str) -> str | None:
         if not path.is_dir():
             return None
         digest = hashlib.sha256()
-        for child in sorted(p for p in path.rglob("*") if p.is_file()):
+        for child in sorted(
+            p
+            for p in path.rglob("*")
+            if p.is_file() and p.relative_to(path).parts[0] != HARNESS_OWNED
+        ):
             digest.update(child.relative_to(path).as_posix().encode() + b"\0")
             digest.update((_hash(child) or "").encode() + b"\0")
         return digest.hexdigest()
@@ -414,20 +413,58 @@ def setup(target: Path, harness: str) -> Path:
     marker.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     env_sh, env_ps1 = _env_scripts(stand, home, repo)
     (stand / "env.sh").write_text(env_sh, encoding="utf-8", newline="\n")
-    (stand / "env.ps1").write_text(env_ps1, encoding="utf-8", newline="\n")
+    # Windows PowerShell 5.1 reads a script without a BOM as the ANSI code page, which
+    # garbles a non-ASCII stand path.
+    (stand / "env.ps1").write_text(env_ps1, encoding="utf-8-sig", newline="\n")
     return stand
 
 
-def _make_writable(func, path, _exc):
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
+def _is_link(path: Path) -> bool:
+    """A symlink, or a Windows junction (which is_symlink does not report)."""
+    st = os.lstat(path)
+    reparse = getattr(st, "st_reparse_tag", 0) == getattr(
+        stat, "IO_REPARSE_TAG_MOUNT_POINT", -1
+    )
+    return stat.S_ISLNK(st.st_mode) or reparse
 
 
-def _remove_tree(path: Path) -> None:
-    if sys.version_info >= (3, 12):
-        shutil.rmtree(path, onexc=_make_writable)
+def _clear_readonly(func, path, exc_info):
+    """Windows only: git marks its object files read-only, which os.unlink refuses there.
+    Clear the flag on that file, never through a link, and retry once. Anything else is
+    raised: a chmod through a link would change a file outside the stand."""
+    exc = exc_info if isinstance(exc_info, BaseException) else exc_info[1]
+    if (
+        os.name == "nt"
+        and func in (os.unlink, os.remove)
+        and isinstance(exc, PermissionError)
+        and not _is_link(Path(path))
+    ):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+        return
+    raise exc
+
+
+def _remove_entry(path: Path) -> None:
+    """Delete one entry; a link is removed itself, never what it points at."""
+    if _is_link(path) or not path.is_dir():
+        try:
+            os.unlink(path)
+        except PermissionError as exc:
+            _clear_readonly(os.unlink, path, exc)
+    elif sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_clear_readonly)
     else:
-        shutil.rmtree(path, onerror=_make_writable)
+        shutil.rmtree(path, onerror=_clear_readonly)
+
+
+def _empty_stand(stand: Path) -> None:
+    """Delete everything in a stand, the marker last, so that a run that fails partway
+    leaves a folder reset still accepts."""
+    for child in sorted(stand.iterdir()):
+        if child.name != MARKER:
+            _remove_entry(child)
+    (stand / MARKER).unlink()
 
 
 def _read_state(stand: Path) -> dict:
@@ -447,7 +484,7 @@ def reset(target: Path, harness: str | None = None) -> Path:
     """Delete a stand (marker required) and set it up again, for the same harness by default."""
     stand = _guard(target)
     state = _read_state(stand)
-    _remove_tree(stand)
+    _empty_stand(stand)
     return setup(stand, harness or state["harness"])
 
 
@@ -455,14 +492,14 @@ def reset(target: Path, harness: str | None = None) -> Path:
 
 
 def _is_user_agent_config(rel: str) -> bool:
+    """A file in one of the places a harness reads user-level config from."""
     parts = rel.split("/")
-    if parts[-1] in AGENT_CONFIG_NAMES:
-        return True
-    return (
-        len(parts) >= 3
-        and parts[0] in (".claude", ".codex")
-        and parts[1] in USER_AGENT_CONFIG_DIRS
-    )
+    watch = USER_CONFIG.get(parts[0])
+    if watch is None or len(parts) < 2:
+        return False
+    if len(parts) == 2:
+        return parts[1] in watch.get("file", ())
+    return parts[1] in watch.get("dir", ()) and parts[2] != HARNESS_OWNED
 
 
 def _is_agent_memory(parts: list[str]) -> bool:
