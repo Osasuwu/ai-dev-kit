@@ -10,23 +10,16 @@ body:
         private repo, and do not paste your agent's report: describe in your own words. There is no
         turnaround promise; see the README's Support section.
   - type: textarea
-    id: named
+    id: reported
     attributes:
-      label: Which classes the agent named
-      description: The class names from the map that the agent said apply to your repo.
+      label: Which cards the agent reported
+      description: The card titles from the index and what the agent said about each. The audit prompt gives holds, does not hold or cannot tell; the interview prompt gives in place, gap or later. Say which prompt you used, and add whether it proposed a fix for a card, or skipped it, if you have that.
     validations:
       required: true
   - type: textarea
-    id: skipped
+    id: missed
     attributes:
-      label: Which classes the agent skipped
-      description: The class names it passed over, and the reason it gave for each, if you have it.
-    validations:
-      required: false
-  - type: textarea
-    id: missing
-    attributes:
-      label: What was missing
-      description: A failure class you hit that the map does not have, or a class that is there but did not fit your case. Say what happened, without private details.
+      label: Which practice you missed
+      description: A practice you needed that no card covers, or a card that is there but did not fit your case. Say what happened, without private details.
     validations:
       required: true

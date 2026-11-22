@@ -19,7 +19,7 @@ Two prompts, one per kind of setup. Pick yours:
 - **Claude Code or OpenAI Codex CLI, on a paid plan or an API key:** the [audit prompt](prompts/audit.md). Your agent checks your repo and user-level config against the cards, proposes fixes, applies the ones you agree to, one at a time, and gives you a watch list. Repo fixes go to a new branch it never pushes; user-level changes are limited to the kinds the prompt lists, and you get a restore command before the first one.
 - **Any other agent, a free quota, or no agent yet:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
 
-If the answer did not help, [say what was missing](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=base-not-enough.yml). The form asks which classes the agent named and which it skipped. This repo and its issues are public: describe in your own words, and do not paste code or paths from a private repo.
+If the answer did not help, [say what was missing](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=base-not-enough.yml). The form asks which cards the agent reported (holds, does not hold or cannot tell from the audit; in place, gap or later from the interview) and which practice you missed. This repo and its issues are public: describe in your own words, and do not paste code or paths from a private repo.
 
 ## Practice cards
 
