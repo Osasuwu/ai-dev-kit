@@ -20,8 +20,10 @@ TSV per area, as the input of the clustering step. With --index, talks of the ba
 with no talk record are counted: talks whose source had no text, which the next run tries
 again, plus any extraction missed.
 
-A batch line that is not JSON, or a record without its `type` and the string fields it
-needs (`talk`; a claim also `claim`), is a bad line: the merge writes nothing and exits 1.
+A batch line that is not JSON, a record without its `type` and the string fields it needs
+(`talk`; a claim also `claim`), or a claim whose talk has no talk record (published or in a
+batch) is a bad line: the merge writes nothing and exits 1. An area becomes a file name of
+lower-case letters, digits and dashes only, so no area writes outside --areas-out.
 """
 
 from __future__ import annotations
@@ -96,11 +98,15 @@ def merge(data: Path, claims_dir: Path) -> tuple[list, list, list, list]:
     next_n = max((id_number(c["cid"]) for c in claims), default=0) + 1
     added = []
     for rec in batch_claims:
+        if rec["talk"] not in talk_meta:
+            # Its grades come from the talk record; without one the claim would carry none.
+            bad.append(f"claim for {rec['talk']}: no talk record")
+            continue
         key = same_claim_key(rec["talk"], rec["claim"])
         if key in seen:
             continue
         seen.add(key)
-        meta = talk_meta.get(rec["talk"], {})
+        meta = talk_meta[rec["talk"]]
         claim = {"cid": f"c{next_n:04d}", **{k: rec.get(k) for k in CLAIM_FIELDS}}
         claim["quality"] = meta.get("quality")
         claim["pitch"] = meta.get("pitch")
@@ -109,11 +115,18 @@ def merge(data: Path, claims_dir: Path) -> tuple[list, list, list, list]:
     return claims + added, talks, added, bad
 
 
+def area_slug(area) -> str:
+    """The area as a file name: lower-case letters, digits and dashes, nothing else."""
+    slug = re.sub(r"[^a-z0-9]+", "-", str(area or "").lower()).strip("-")
+    return slug or "other"
+
+
 def write_areas(out: Path, added: list[dict]) -> None:
     out.mkdir(parents=True, exist_ok=True)
     by_area = collections.defaultdict(list)
     for c in added:
-        by_area[(c.get("area") or "other").strip().lower()].append(c)
+        # The area is extraction output: a path in it must not reach outside `out`.
+        by_area[area_slug(c.get("area"))].append(c)
     for area, cs in sorted(by_area.items()):
         rows = [
             "\t".join(
@@ -127,8 +140,7 @@ def write_areas(out: Path, added: list[dict]) -> None:
             )
             for c in cs
         ]
-        name = area.replace("/", "-") + ".tsv"
-        (out / name).write_text("\n".join(rows) + "\n", encoding="utf-8")
+        (out / f"{area}.tsv").write_text("\n".join(rows) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str]) -> int:

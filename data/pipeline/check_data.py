@@ -3,10 +3,10 @@
 Usage: python data/pipeline/check_data.py [data dir]   (default: the data/ beside this file)
 
 Each data file has a schema below: the exact fields of its records, each a single value
-except the key lists, or the exact columns of its table, header and rows. A field outside
-the schema (a maintainer's status or relevance column, a talk's title or speakers fetched
-from the conference site), a value that nests more fields, and a file with no schema fail
-the check. The only text files allowed are data/README.md, data/sources.md and the
+except the key lists, the grades (`quality`, `depth`, `pitch`) in their range, or the exact
+columns of its table, header and rows. A field outside the schema (a maintainer's status or
+relevance column, a talk's title or speakers fetched from the conference site), a value that
+nests more fields or falls outside its range, and a file with no schema fail the check. The only text files allowed are data/README.md, data/sources.md and the
 pipeline's own .md and .py files; they and every data file are also scanned for references
 to the maintainer's private material: a home path or one of the private file names. Prints
 one line per problem; exit 1 when there is any.
@@ -38,6 +38,11 @@ MERGED_FIELDS = ("key", "title", "idea", "contested", "from")
 INDEX_HEADER = ["key", "talks", "title", "idea"]
 # The only fields that hold a list, and each list holds strings (claim or cluster keys).
 LIST_FIELDS = ("cids", "from", "singletons", "noise")
+# Grades the extraction step gives: a value outside these is a broken record, for example a
+# claim whose talk had no talk record to copy its grades from.
+GRADE = (lambda v: type(v) is int and 1 <= v <= 5, "an integer 1-5")
+FLAG = (lambda v: type(v) is bool, "true or false")
+VALUE_RULES = {"quality": GRADE, "depth": GRADE, "pitch": FLAG}
 
 # Prose and code, not data: scanned for personal references only. Only these two files and the
 # pipeline's own folder; any other .md or .py under data/ has no schema.
@@ -69,6 +74,14 @@ def fields(where, record, allowed):
         f"{where}: field '{k}' is not a single value"
         for k in sorted(record)
         if k in allowed and not single_or_listed(k, record[k])
+    ]
+    errors += [
+        f"{where}: field '{k}' is {record[k]!r}, expected {VALUE_RULES[k][1]}"
+        for k in sorted(record)
+        if k in allowed
+        and k in VALUE_RULES
+        and single_or_listed(k, record[k])
+        and not VALUE_RULES[k][0](record[k])
     ]
     return errors
 

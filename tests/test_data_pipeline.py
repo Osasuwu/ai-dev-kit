@@ -145,6 +145,17 @@ def test_check_data_names_an_object_or_list_in_a_scalar_field(tmp_path):
     ]
 
 
+def test_check_data_names_a_grade_outside_its_range(tmp_path):
+    d = clean_data_dir(tmp_path)
+    write_jsonl(d / "claims.jsonl", [{**CLAIM, "quality": None, "depth": 7}])
+    write_jsonl(d / "talks.jsonl", [{**TALK, "pitch": "yes"}])
+    assert load("check_data").check(d) == [
+        "claims.jsonl:1: field 'depth' is 7, expected an integer 1-5",
+        "claims.jsonl:1: field 'quality' is None, expected an integer 1-5",
+        "talks.jsonl:1: field 'pitch' is 'yes', expected true or false",
+    ]
+
+
 def test_check_data_names_a_missing_group_key(tmp_path):
     d = clean_data_dir(tmp_path)
     group = json.loads((d / "clusters" / "A.json").read_text(encoding="utf-8"))
@@ -229,9 +240,13 @@ def test_batches_picks_the_events_the_caller_names(tmp_path):
     assert picked == ["talk:new", "talk:loose"]
 
 
-def test_batches_requires_an_event_pattern(tmp_path):
-    with pytest.raises(SystemExit):
+def test_batches_requires_an_event_pattern(tmp_path, capsys):
+    with pytest.raises(SystemExit) as exit_:
         run_batches(tmp_path, [talk_row("a", "x")])
+    assert exit_.value.code == 2
+    assert "the following arguments are required: --event-pattern" in (
+        capsys.readouterr().err
+    )
 
 
 def test_batches_skips_talks_already_published(tmp_path):
@@ -349,7 +364,13 @@ def test_merge_writes_new_talks_with_derived_fields_only(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "bad_line", ["not json", json.dumps({"type": "claim", "talk": "talk:b"})]
+    "bad_line",
+    [
+        "not json",
+        json.dumps({"type": "claim", "talk": "talk:b"}),
+        # No talk record for its talk, published or in a batch: no grades to copy.
+        json.dumps({"type": "claim", "talk": "talk:none", "claim": "Orphan idea."}),
+    ],
 )
 def test_merge_writes_nothing_when_a_batch_line_is_bad(tmp_path, bad_line):
     data = tmp_path / "data"
@@ -392,6 +413,29 @@ def test_merge_writes_area_inputs_for_new_claims_only(tmp_path):
     assert (tmp_path / "areas" / "evals.tsv").read_text("utf-8") == (
         "c0002\tq3\tmeasured\td2\tNew idea.\n"
     )
+
+
+def test_merge_keeps_area_files_inside_the_output_folder(tmp_path):
+    data = tmp_path / "out" / "data"
+    write_jsonl(data / "claims.jsonl", [CLAIM])
+    write_jsonl(data / "talks.jsonl", [TALK])
+    run_merge(
+        tmp_path / "out",
+        data,
+        [
+            batch_talk("talk:b"),
+            {**batch_claim("talk:b", "One."), "area": "..\\..\\x"},
+            {**batch_claim("talk:b", "Two."), "area": "../../y"},
+            {**batch_claim("talk:b", "Three."), "area": "Org/Process"},
+        ],
+    )
+    areas = tmp_path / "out" / "areas"
+    assert sorted(p.name for p in areas.iterdir()) == [
+        "org-process.tsv",
+        "x.tsv",
+        "y.tsv",
+    ]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["out"]
 
 
 # --- build_index: the cluster index is generated from the published files ------------
@@ -462,6 +506,9 @@ def test_commit_guard_allows_produced_files(path):
         "docs/CHANGELOG.md",
         # A case-insensitive checkout writes this into data/pipeline/.
         "data/Pipeline/commit_guard.py",
+        # A dot file under data/ can set a filter that runs a command on `git add`.
+        "data/.gitattributes",
+        "cards/.hidden/x.md",
     ],
 )
 def test_commit_guard_refuses_everything_else(path):
@@ -549,10 +596,10 @@ def agent_tools(name):
 
 
 def test_the_fetcher_agent_has_network_read_and_file_tools_only():
+    # No Glob: an injected page cannot have it search the disk for files to send out.
     assert agent_tools("aie-fetcher") == [
         "Read",
         "Write",
-        "Glob",
         "WebFetch",
         "mcp__ai-engineer__list_conferences",
         "mcp__ai-engineer__get_schedule",
@@ -563,3 +610,75 @@ def test_the_fetcher_agent_has_network_read_and_file_tools_only():
 
 def test_the_worker_agent_has_file_tools_only():
     assert agent_tools("aie-worker") == ["Read", "Write", "Glob", "Grep"]
+
+
+# --- snapshot: files that run code in the credentialed session stay unchanged ----------
+
+
+def snapshot_repo(tmp_path):
+    repo, home = tmp_path / "repo", tmp_path / "home"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    (home / ".claude" / "agents").mkdir(parents=True)
+    (home / ".claude" / "agents" / "aie-fetcher.md").write_text(
+        "tools: Read\n", "utf-8"
+    )
+    (repo / "data").mkdir()
+    (repo / "data" / "claims.jsonl").write_text("{}\n", encoding="utf-8")
+    return repo, home
+
+
+def add_hook(repo, home):
+    (repo / ".git" / "hooks" / "pre-commit").write_text("#!/bin/sh\n", "utf-8")
+
+
+def edit_git_config(repo, home):
+    with (repo / ".git" / "config").open("a", encoding="utf-8") as f:
+        f.write("[core]\n\tfsmonitor = ./x.sh\n")
+
+
+def add_project_settings(repo, home):
+    (repo / ".claude").mkdir()
+    (repo / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
+
+
+def add_user_settings(repo, home):
+    (home / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+
+
+def widen_installed_agent(repo, home):
+    agent = home / ".claude" / "agents" / "aie-fetcher.md"
+    agent.write_text("tools: Read, Bash\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        add_hook,
+        edit_git_config,
+        add_project_settings,
+        add_user_settings,
+        widen_installed_agent,
+    ],
+)
+def test_snapshot_changes_when_a_file_that_runs_code_changes(tmp_path, change):
+    repo, home = snapshot_repo(tmp_path)
+    snapshot = load("snapshot")
+    before = snapshot.fingerprint(repo, home)
+    change(repo, home)
+    assert snapshot.fingerprint(repo, home) != before
+
+
+def test_snapshot_ignores_the_data_a_rerun_writes(tmp_path):
+    repo, home = snapshot_repo(tmp_path)
+    snapshot = load("snapshot")
+    before = snapshot.fingerprint(repo, home)
+    (repo / "data" / "claims.jsonl").write_text('{"cid": "c0001"}\n', encoding="utf-8")
+    assert snapshot.fingerprint(repo, home) == before
+
+
+def test_snapshot_prints_one_line_to_compare(tmp_path, capsys):
+    repo, home = snapshot_repo(tmp_path)
+    snapshot = load("snapshot")
+    assert snapshot.main(["--repo", str(repo), "--home", str(home)]) == 0
+    assert capsys.readouterr().out == f"snapshot {snapshot.fingerprint(repo, home)}\n"

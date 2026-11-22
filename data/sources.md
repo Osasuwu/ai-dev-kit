@@ -16,10 +16,11 @@ them.
 
 - **Talk lists and talk records**: the conference data API,
   `https://ai.engineer/api/data/<dataset>?format=json`. The datasets `status` (`publishedAt`,
-  `corpusVersion`), `topics` and `chapters` were used before; requests were sent with a
-  browser `User-Agent`. The 2026 talk list carried `slug`, `title`, `url`, `event`,
-  `durationMs`, `speakers`, `topics`, `summary` and `slideText` per talk. The talk list
-  dataset's name and the API's current shape were not checked when this file was written:
+  `corpusVersion`), `topics` and `chapters` were used before, by a script that sent a
+  browser `User-Agent`. The rerun's fetcher uses `WebFetch`, which cannot set one; if the API
+  refuses it, the fetcher says so and the run uses the MCP tools below. The 2026 talk list
+  carried `slug`, `title`, `url`, `event`, `durationMs`, `speakers`, `topics`, `summary` and
+  `slideText` per talk. The talk list dataset's name and the API's current shape were not checked when this file was written:
   the first supervised rerun checks them and corrects this line.
 - **Talk records and citations**: the `ai-engineer` MCP server. `fetch` with `id` =
   `talk:<slug>` returns the talk; with `section: "transcript"` and `query` = a claim's `search`

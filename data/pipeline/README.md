@@ -1,7 +1,7 @@
 # The data rerun
 
 How `data/` is regenerated when new conference talks come out. The steps are agent-run
-instruction files plus five small scripts; a run is an agent session that follows this file.
+instruction files plus six small scripts; a run is an agent session that follows this file.
 Where the data comes from and how to refetch it: [`../sources.md`](../sources.md).
 
 ## The split
@@ -23,7 +23,9 @@ credentials. The two are kept apart:
 ## Setup, once per device
 
 1. Copy `data/pipeline/agents/aie-fetcher.md` and `aie-worker.md` into `~/.claude/agents/`.
-   Re-copy them when they change.
+   Re-copy them when they change. The tests pin the copies in this folder; the harness
+   enforces the installed ones, so a stale installed copy is caught by nothing but
+   `snapshot.py` (it hashes the installed copies, so a change during a run stops it).
 2. The `ai-engineer` MCP server is connected (the fetcher's `mcp__ai-engineer__*` tools).
 3. The repo's pre-push leak gate is installed (`scripts/pre_push_leak_gate.py`, install steps
    in its docstring).
@@ -35,12 +37,22 @@ Everything fetched stays there; nothing fetched is committed. `<events>` is a re
 expression for the event names in scope, for example `2027`. Run from the repo root, on a new
 branch cut from `origin/main`.
 
+**Snapshot, before step 1.** Run `python data/pipeline/snapshot.py` and keep its one output
+line in the session's own context, not in a file. It hashes the files that run code in this
+session: git hooks and git config, the project's and the user's Claude Code settings, and the
+installed agent definitions.
+
 **Unchanged check, before every script.** The agents can write files, so before steps 2, 4,
-6, 7 and 8 run, the session checks that the pipeline is still the one on `origin/main`: both
-`git diff --quiet origin/main -- data/pipeline` and `git status --porcelain --ignored --
-data/pipeline` print nothing and exit 0 (the second catches new and ignored files, such as
-a planted module). Any output stops the run before the script runs: commit nothing and name
-the paths in the run's note.
+6, 7 and 8 run, the session checks, in this order:
+
+1. The pipeline is still the one on `origin/main`: both
+   `git -c core.fsmonitor=false diff --quiet origin/main -- data/pipeline` and
+   `git -c core.fsmonitor=false status --porcelain --ignored -- data/pipeline` print nothing
+   and exit 0 (the second catches new and ignored files, such as a planted module).
+2. `python data/pipeline/snapshot.py` prints the same line as before step 1.
+
+Any difference stops the run before the script runs: commit nothing and name what changed in
+the run's note.
 
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
@@ -68,10 +80,19 @@ clusters, and the pull request URL, or the step where it stopped and why.
 
 ## What this split does not stop
 
-- An agent's `Write` is not limited to a path. It could write outside `<scratch>` and `data/`,
-  for example into `.git/hooks/` or `.claude/`, which run code in the credentialed session
-  without any script step; the commit guard reads staged paths only. The unchanged check
-  covers `data/pipeline/` alone.
+- An agent's `Write` is not limited to a path. The snapshot catches a write to the files it
+  hashes (git hooks and config, Claude Code settings, the installed agents) and the commit
+  runs with an empty hooks folder, but a write anywhere else is not caught: a file the
+  session loads that the snapshot does not name, or a change that takes effect before the
+  next check (a settings hook firing on the session's next tool call). The commit guard
+  reads staged paths only.
+- An agent's `Read` is not limited to a path. The fetcher is told to read only
+  `data/talks.jsonl` and has no `Glob` to search with, but an injected page can still make
+  it read a file whose path it already knows (a token file, an SSH key) and send it out in a
+  `WebFetch` URL or an MCP query. Removing `Read` from the fetcher closes this; it then needs
+  the published talk ids from its task message instead. The worker has no network, but it
+  writes the data files the pull request publishes: a secret it read and wrote into a field
+  is stopped only by the leak gate and gitleaks, which catch known patterns.
 - An agent's text reaches the public pull request only through the data files the scripts
   check (`check_data.py`); the description is written from counts. A data file can still
   carry injected text in a field, which `check_data.py` does not judge: the human review does.
