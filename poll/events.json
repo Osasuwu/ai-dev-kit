@@ -1,0 +1,13 @@
+[
+  {"id": "conference:europe/2026", "end": "2026-04-10"},
+  {"id": "conference:miami/2026", "end": "2026-04-21"},
+  {"id": "conference:singapore/2026", "end": "2026-05-17"},
+  {"id": "conference:worldsfair/2026", "end": "2026-07-02"},
+  {"id": "conference:paris/2026", "end": "2026-09-24"},
+  {"id": "conference:nyc/2026", "end": "2026-10-14"},
+  {"id": "conference:shanghai/2026", "end": "2026-11-06"},
+  {"id": "conference:code/2026", "end": "2026-11-12"},
+  {"id": "conference:europe/2027", "end": "2027-02-19"},
+  {"id": "conference:miami/2027", "end": "2027-04-27"},
+  {"id": "conference:singapore/2027", "end": "2027-05-22"}
+]
