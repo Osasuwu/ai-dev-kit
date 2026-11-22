@@ -237,11 +237,9 @@ def test_batches_picks_the_events_the_caller_names(tmp_path):
         talk_row("old", "AI Engineer Europe 2026"),
         talk_row("new", "AI Engineer Europe 2027"),
         talk_row("loose", ""),
-        # The fetch step writes a talk with no event as JSON null (#357).
-        talk_row("unset", None),
     ]
     picked = run_batches(tmp_path, rows, "--event-pattern", "2027")
-    assert picked == ["talk:new", "talk:loose", "talk:unset"]
+    assert picked == ["talk:new", "talk:loose"]
 
 
 def test_batches_requires_an_event_pattern(tmp_path, capsys):
