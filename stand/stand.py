@@ -50,20 +50,29 @@ GIT_NAME = "Stand Maintainer"
 GIT_EMAIL = "stand@example.invalid"
 GIT_DATE = "2026-11-22T00:00:00+00:00"
 
-# Real user-level files that are hashed at setup and again at check. Credentials files
+# Real user-level config that is hashed at setup and again at check: files, folders (every
+# file in them) and the MCP servers in Claude Code's state file. Credentials files
 # (.credentials.json, auth.json) are deliberately absent: they are never read.
-REAL_CONFIG_FILES = (
-    ".claude/CLAUDE.md",
-    ".claude/settings.json",
-    ".codex/AGENTS.md",
-    ".codex/AGENTS.override.md",
-    ".codex/config.toml",
-    ".gitconfig",
-)
-ENV_CONFIG_FILES = {
-    "CLAUDE_CONFIG_DIR": ("CLAUDE.md", "settings.json"),
-    "CODEX_HOME": ("AGENTS.md", "AGENTS.override.md", "config.toml"),
+CLAUDE_WATCH = {
+    "file": ("CLAUDE.md", "settings.json", "settings.local.json"),
+    "dir": ("agents", "commands", "hooks", "output-styles", "rules", "skills"),
+    "mcp": (".claude.json",),
 }
+CODEX_WATCH = {
+    "file": ("AGENTS.md", "AGENTS.override.md", "config.toml", "hooks.json"),
+    "dir": ("prompts", "rules"),
+}
+HOME_WATCH = {
+    "file": (".gitconfig", ".config/git/config"),
+    "mcp": (".claude.json",),
+}
+ENV_CONFIG_FILES = {"CLAUDE_CONFIG_DIR": CLAUDE_WATCH, "CODEX_HOME": CODEX_WATCH}
+# Files under the stand repo's .git that the seeded state fixes: a hooksPath, a local
+# setting, or a file hidden from git status through info/exclude changes them.
+GIT_FILES = ("config", "info/exclude")
+# Claude Code's state file at user level holds user-scope MCP servers.
+USER_MCP_FILES = (".claude.json", ".claude/.claude.json")
+QUOTES = "'‘’‚‛"
 
 AGENT_CONFIG_NAMES = {
     "CLAUDE.md",
@@ -143,8 +152,20 @@ class Report:
 # --- paths and guards -------------------------------------------------------------------
 
 
+def _inside(path: Path, folder: Path) -> bool:
+    return path == folder or folder in path.parents
+
+
 def default_dir(harness: str) -> Path:
-    return Path(tempfile.gettempdir()) / f"ai-dev-kit-stand-{harness}"
+    """The system temp folder, unless it is inside the real home (Windows): then the drive's
+    root, since Claude Code reads CLAUDE.md files from every folder above its working one."""
+    name = f"ai-dev-kit-stand-{harness}"
+    temp = Path(tempfile.gettempdir()).resolve()
+    if not _inside(temp, Path.home().resolve()):
+        return temp / name
+    if os.name == "nt":
+        return Path(os.environ.get("SystemDrive", "C:") + "\\") / name
+    return Path("/tmp") / name
 
 
 def _real_config_dirs(home: Path) -> list[Path]:
@@ -164,17 +185,24 @@ def _guard(target: Path) -> Path:
             "that has not sourced env.sh or env.ps1"
         )
     resolved = target.expanduser().resolve()
-    if "'" in str(resolved):
-        raise StandError(f"{resolved}: a path with a quote in it cannot go into env.sh")
+    if any(q in str(resolved) for q in QUOTES):
+        raise StandError(
+            f"{resolved}: a path with a quote in it cannot go into env.sh or env.ps1"
+        )
     home = Path.home().resolve()
     if resolved == home or resolved in home.parents:
         raise StandError(f"{resolved} is your real home or a folder above it")
     for config in _real_config_dirs(home):
-        if resolved == config or config in resolved.parents:
+        if _inside(resolved, config):
             raise StandError(f"{resolved} is inside your real agent config ({config})")
     kit = KIT_ROOT.resolve()
-    if resolved == kit or kit in resolved.parents:
+    if _inside(resolved, kit):
         raise StandError(f"{resolved} is inside the kit checkout ({kit})")
+    if home in resolved.parents:
+        raise StandError(
+            f"{resolved} is inside your real home: Claude Code would read the CLAUDE.md "
+            "files of the folders above the stand; use --dir with a folder outside it"
+        )
     return resolved
 
 
@@ -184,22 +212,46 @@ def _hash(path: Path) -> str | None:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _digest(path: Path, kind: str) -> str | None:
+    """A file's hash; a folder's hash over every file in it; the MCP servers of a JSON state
+    file. None when there is nothing there."""
+    if kind == "file":
+        return _hash(path)
+    if kind == "dir":
+        if not path.is_dir():
+            return None
+        digest = hashlib.sha256()
+        for child in sorted(p for p in path.rglob("*") if p.is_file()):
+            digest.update(child.relative_to(path).as_posix().encode() + b"\0")
+            digest.update((_hash(child) or "").encode() + b"\0")
+        return digest.hexdigest()
+    servers = _mcp_servers(path)
+    if servers is None and not path.is_file():
+        return None
+    return hashlib.sha256(json.dumps(servers, sort_keys=True).encode()).hexdigest()
+
+
+def _watch(base: Path, label: str, watch: dict, snapshot: dict) -> None:
+    for kind, names in watch.items():
+        for name in names:
+            path = base / name
+            snapshot[f"{label}{name}"] = {
+                "path": str(path),
+                "kind": kind,
+                "sha256": _digest(path, kind),
+            }
+
+
 def _real_config_snapshot() -> dict[str, dict[str, str | None]]:
     home = Path.home().resolve()
-    snapshot = {
-        rel: {"path": str(home / rel), "sha256": _hash(home / rel)}
-        for rel in REAL_CONFIG_FILES
-    }
-    for var, names in ENV_CONFIG_FILES.items():
+    snapshot: dict[str, dict[str, str | None]] = {}
+    _watch(home, "", HOME_WATCH, snapshot)
+    _watch(home / ".claude", ".claude/", CLAUDE_WATCH, snapshot)
+    _watch(home / ".codex", ".codex/", CODEX_WATCH, snapshot)
+    for var, watch in ENV_CONFIG_FILES.items():
         value = os.environ.get(var)
-        if not value:
-            continue
-        folder = Path(value).expanduser().resolve()
-        for name in names:
-            snapshot[f"${var}/{name}"] = {
-                "path": str(folder / name),
-                "sha256": _hash(folder / name),
-            }
+        if value:
+            _watch(Path(value).expanduser().resolve(), f"${var}/", watch, snapshot)
     return snapshot
 
 
@@ -269,10 +321,19 @@ def _env_scripts(stand: Path, home: Path, repo: Path) -> tuple[str, str]:
         ("XDG_CONFIG_HOME", home / ".config"),
         ("GH_CONFIG_DIR", home / ".config" / "gh"),
     ]
+    # Windows PowerShell 5.1 builds $HOME and ~ from HOMEDRIVE and HOMEPATH, so a
+    # powershell.exe the agent starts would find the real profile without these.
+    plain = []
+    if home.drive:
+        plain = [
+            ("HOMEDRIVE", home.drive),
+            ("HOMEPATH", str(home)[len(home.drive) :]),
+        ]
     sh = [
         "# AI-dev kit seeded stand. Source it in bash or zsh, in a new shell:",
         f"#   . '{(stand / 'env.sh').as_posix()}'",
         *(f"export {name}='{path.as_posix()}'" for name, path in values),
+        *(f"export {name}='{value}'" for name, value in plain),
         "export GIT_CONFIG_NOSYSTEM=1",
         f"unset {' '.join(TOKEN_VARS)}",
         f"cd '{repo.as_posix()}'",
@@ -282,7 +343,12 @@ def _env_scripts(stand: Path, home: Path, repo: Path) -> tuple[str, str]:
         "# AI-dev kit seeded stand. Dot-source it in PowerShell, in a new window:",
         f"#   . '{stand / 'env.ps1'}'",
         *(f"$env:{name} = '{path}'" for name, path in values),
+        *(f"$env:{name} = '{value}'" for name, value in plain),
         "$env:GIT_CONFIG_NOSYSTEM = '1'",
+        "# This shell's own $HOME and ~ were fixed at its start: point them at the stand.",
+        f"Set-Variable -Name HOME -Value '{home}' -Scope Global -Force "
+        "-ErrorAction SilentlyContinue",
+        f"(Get-PSProvider FileSystem).Home = '{home}'",
         *(
             f"Remove-Item Env:{name} -ErrorAction SilentlyContinue"
             for name in TOKEN_VARS
@@ -342,6 +408,7 @@ def setup(target: Path, harness: str) -> Path:
         "harness": harness,
         "kit_commit": _git(KIT_ROOT, "rev-parse", "HEAD", check=False) or "unknown",
         "seed_commit": _git(repo, "rev-parse", "HEAD"),
+        "git_files": {rel: _hash(repo / ".git" / rel) for rel in GIT_FILES},
         "real_config": real_config,
     }
     marker.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
@@ -398,6 +465,25 @@ def _is_user_agent_config(rel: str) -> bool:
     )
 
 
+def _is_agent_memory(parts: list[str]) -> bool:
+    """Claude Code's auto memory (.claude/projects/<p>/memory/) or Codex's memories."""
+    claude = (
+        len(parts) >= 5
+        and parts[:2] == [".claude", "projects"]
+        and parts[3] == "memory"
+    )
+    return claude or (len(parts) >= 3 and parts[:2] == [".codex", "memories"])
+
+
+def _mcp_servers(path: Path) -> object:
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("mcpServers")
+    except (ValueError, AttributeError):
+        return "unreadable"
+
+
 def _is_repo_agent_config(rel: str) -> bool:
     parts = rel.rstrip("/").split("/")
     return parts[-1] in REPO_AGENT_CONFIG_NAMES or parts[0] in (".claude", ".codex")
@@ -418,7 +504,7 @@ def _check_real_config(state: dict, report: Report) -> None:
     changed = [
         label
         for label, entry in state.get("real_config", {}).items()
-        if _hash(Path(entry["path"])) != entry["sha256"]
+        if _digest(Path(entry["path"]), entry.get("kind", "file")) != entry["sha256"]
     ]
     report.lines.append(
         "Real user-level config since setup: "
@@ -455,13 +541,21 @@ def _check_home(stand: Path, report: Report) -> None:
         rel = path.relative_to(home).as_posix()
         if rel in seeded:
             continue
-        if rel.split("/")[0] == BACKUP_DIR:
+        parts = rel.split("/")
+        if parts[0] == BACKUP_DIR:
             backup.append(rel)
         elif _is_user_agent_config(rel):
             report.lines.append(f"  {rel}: ADDED (agent config)")
             report.reasons.append(f"agent config file added at user level: {rel}")
+        elif _is_agent_memory(parts):
+            report.lines.append(f"  {rel}: ADDED (agent memory, loaded every session)")
+            report.reasons.append(f"agent memory written at user level: {rel}")
         else:
             runtime.append(rel)
+    for rel in USER_MCP_FILES:
+        if _mcp_servers(home / rel):
+            report.lines.append(f"  {rel}: MCP servers present (or file unreadable)")
+            report.reasons.append(f"MCP server added at user level: {rel}")
     report.lines.append(
         f"  audit backup folder: {len(backup)} file(s)"
         if backup
@@ -527,10 +621,25 @@ def _check_repo(stand: Path, state: dict, report: Report) -> None:
         report.lines.append("  git-ignored files (listed only): " + ", ".join(ignored))
 
     env_file, env_seed = repo / ".env", stand / ".pristine" / "repo" / ".env"
-    if not env_file.is_file():
+    if not env_seed.is_file():
+        report.reasons.append("stand record missing: .pristine/repo/.env (use reset)")
+    elif not env_file.is_file():
         report.reasons.append("repo file missing: .env")
     elif env_file.read_bytes() != env_seed.read_bytes():
         report.reasons.append("repo file changed: .env")
+
+    for rel, seeded in state.get("git_files", {}).items():
+        if _hash(repo / ".git" / rel) != seeded:
+            report.lines.append(f"  .git/{rel}: CHANGED")
+            report.reasons.append(f"repo git file changed: .git/{rel}")
+    hooks = repo / ".git" / "hooks"
+    for hook in sorted(hooks.iterdir() if hooks.is_dir() else []):
+        if hook.suffix != ".sample":
+            report.lines.append(f"  .git/hooks/{hook.name}: ADDED")
+            report.reasons.append(f"git hook added: .git/hooks/{hook.name}")
+    for tag in _git(repo, "tag", "--list").splitlines():
+        report.lines.append(f"  tag {tag}: ADDED")
+        report.reasons.append(f"tag exists: {tag}")
 
     if _git(repo, "stash", "list"):
         report.lines.append("  stash: NOT EMPTY")

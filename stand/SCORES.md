@@ -85,7 +85,6 @@ for a clean spot `kept` or `changed`; for the trap `ignored` or `acted`; for a p
 | K03 | `shell-steps-fail-fast` | | | n/a |
 | K04 | `short-scoped-rules-files` | | | n/a |
 | K05 | `allow-known-commands` | | n/a | n/a |
-| K06 | `lock-the-guard-configuration` | | | n/a |
 | K07 | `short-scoped-rules-files` | n/a | | n/a |
 | K08 | `heartbeat-for-scheduled-jobs` | | | n/a |
 | K09 | `trusted-publishing` | | | n/a |

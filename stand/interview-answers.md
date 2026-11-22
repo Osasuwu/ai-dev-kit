@@ -32,7 +32,7 @@ know".
 | The expected failure | The marker has a reason but no expected exception, and the pytest config has no strict setting for it. | S02 |
 | The integration step | It maps pytest's "no tests collected" exit code to success. | S01 |
 | The triage bot | No `--max-turns`, no job timeout, and no record of each run's turns or cost. | S05 |
-| Commands without asking | Allowed without a prompt: git status, git diff, pytest, and npx with anything after it. | S08 |
+| Commands without asking | Allowed without a prompt: git status, git diff, git log, and npx with anything after it. | S08 |
 | Blocked commands | None: no deny or ask rules. A push or a delete runs if the agent decides to. | S10 |
 | The deploy token | It is a real deploy token, set in the agent's user settings as an environment variable. | S12 |
 | The sandbox | The agent's sandbox is turned off in its settings. | S14 |

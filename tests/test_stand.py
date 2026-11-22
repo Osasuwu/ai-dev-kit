@@ -160,6 +160,12 @@ REFUSALS = [
         lambda tmp, home: tmp / "kit" / "stand" / "x",
         "kit checkout",
     ),
+    (
+        "inside-real-home",
+        lambda tmp, home: home / "work" / "stand",
+        "inside your real home",
+    ),
+    ("curly-quote", lambda tmp, home: tmp / "it’s", "quote"),
 ]
 
 
@@ -194,6 +200,31 @@ def test_setup_refuses_a_non_empty_folder_without_the_marker(tmp_path, real_home
     assert sorted(p.name for p in target.iterdir()) == ["notes.txt"]
 
 
+@pytest.mark.parametrize("var", ["CLAUDE_CONFIG_DIR", "CODEX_HOME"])
+def test_setup_refuses_a_folder_inside_a_config_dir_named_by_env(
+    tmp_path, real_home, monkeypatch, var
+):
+    config = tmp_path / "elsewhere" / "agent-config"
+    config.mkdir(parents=True)
+    monkeypatch.setenv(var, str(config))
+
+    with pytest.raises(stand.StandError, match="real agent config"):
+        stand.setup(config / "stand", "claude-code")
+
+    assert not (config / "stand").exists()
+
+
+def test_default_dir_is_outside_the_real_home(tmp_path, real_home, monkeypatch):
+    monkeypatch.setattr(stand.tempfile, "gettempdir", lambda: str(real_home / "Temp"))
+    inside = stand.default_dir("codex")
+    monkeypatch.setattr(stand.tempfile, "gettempdir", lambda: str(tmp_path / "tmp"))
+    outside = stand.default_dir("codex")
+
+    assert inside.name == "ai-dev-kit-stand-codex"
+    assert real_home.resolve() not in inside.resolve().parents
+    assert outside == (tmp_path / "tmp").resolve() / "ai-dev-kit-stand-codex"
+
+
 def test_setup_refuses_when_run_from_a_stand_shell(tmp_path, real_home, monkeypatch):
     monkeypatch.setenv("AI_DEV_KIT_STAND", str(tmp_path / "other"))
 
@@ -215,6 +246,19 @@ def test_reset_refuses_a_folder_without_the_marker(tmp_path, real_home):
         stand.reset(target)
 
     assert (target / "notes.txt").read_text() == "mine\n"
+
+
+def test_reset_refuses_a_marked_folder_inside_the_real_config(tmp_path, real_home):
+    """A copied marker does not make the real ~/.claude deletable."""
+    target = real_home / ".claude" / "stand"
+    target.mkdir()
+    (target / stand.MARKER).write_text('{"harness": "claude-code"}\n')
+    before = snapshot(real_home)
+
+    with pytest.raises(stand.StandError, match="real agent config"):
+        stand.reset(target)
+
+    assert snapshot(real_home) == before
 
 
 def test_reset_returns_a_changed_stand_to_its_seeds(tmp_path, real_home):
@@ -318,6 +362,55 @@ def _change_real_config(target, repo, home):
     )
 
 
+def _add_real_agent_file(target, repo, home):
+    real = Path(os.environ["HOME"])
+    (real / ".claude" / "agents").mkdir()
+    (real / ".claude" / "agents" / "helper.md").write_text("x\n")
+
+
+def _add_real_mcp_server(target, repo, home):
+    real = Path(os.environ["HOME"])
+    (real / ".claude.json").write_text('{"mcpServers": {"x": {"command": "x"}}}\n')
+
+
+def _detach_head(target, repo, home):
+    git(repo, "checkout", "-q", "--detach")
+
+
+def _add_git_hook(target, repo, home):
+    (repo / ".git" / "hooks" / "pre-commit").write_text("#!/bin/sh\n")
+
+
+def _set_hooks_path(target, repo, home):
+    git(repo, "config", "core.hooksPath", "hooks")
+
+
+def _hide_a_file(target, repo, home):
+    with (repo / ".git" / "info" / "exclude").open("a") as f:
+        f.write("notes.txt\n")
+    (repo / "notes.txt").write_text("x\n")
+
+
+def _add_tag(target, repo, home):
+    git(repo, "tag", "v1")
+
+
+def _add_user_mcp_server(target, repo, home):
+    (home / ".claude" / ".claude.json").write_text(
+        '{"numStartups": 1, "mcpServers": {"x": {"command": "x"}}}\n'
+    )
+
+
+def _write_agent_memory(target, repo, home):
+    memory = home / ".claude" / "projects" / "p" / "memory"
+    memory.mkdir(parents=True)
+    (memory / "MEMORY.md").write_text("- a rule\n")
+
+
+def _lose_the_stand_record(target, repo, home):
+    (target / ".pristine" / "repo" / ".env").unlink()
+
+
 DEPARTURES = [
     (_change_user_settings, ["user file changed: .claude/settings.json"]),
     (_remove_user_rules, ["user file missing: .claude/CLAUDE.md"]),
@@ -348,6 +441,25 @@ DEPARTURES = [
     (_remove_env_file, ["repo file missing: .env"]),
     (_leave_a_stash, ["stash exists in repo"]),
     (_change_real_config, ["real user-level config changed: .claude/settings.json"]),
+    (_add_real_agent_file, ["real user-level config changed: .claude/agents"]),
+    (_add_real_mcp_server, ["real user-level config changed: .claude.json"]),
+    (_detach_head, ["repo HEAD detached"]),
+    (_add_git_hook, ["git hook added: .git/hooks/pre-commit"]),
+    (_set_hooks_path, ["repo git file changed: .git/config"]),
+    (
+        _hide_a_file,
+        ["repo git file changed: .git/info/exclude"],
+    ),
+    (_add_tag, ["tag exists: v1"]),
+    (_add_user_mcp_server, ["MCP server added at user level: .claude/.claude.json"]),
+    (
+        _write_agent_memory,
+        ["agent memory written at user level: .claude/projects/p/memory/MEMORY.md"],
+    ),
+    (
+        _lose_the_stand_record,
+        ["stand record missing: .pristine/repo/.env (use reset)"],
+    ),
 ]
 
 
@@ -366,6 +478,22 @@ def test_check_names_each_departure_from_the_seeded_state(
     assert report.reasons == reasons
     assert report.seeded is False
     assert report.lines[-1] == f"SEEDED STATE: no ({'; '.join(reasons)})"
+
+
+def test_check_ignores_the_real_claude_json_outside_its_mcp_servers(
+    tmp_path, real_home
+):
+    """Claude Code rewrites ~/.claude.json on every start; only its servers are config."""
+    state = real_home / ".claude.json"
+    state.write_text('{"numStartups": 1, "mcpServers": {"a": {"command": "a"}}}\n')
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    state.write_text('{"numStartups": 2, "mcpServers": {"a": {"command": "a"}}}\n')
+
+    report = stand.check(target)
+
+    assert report.reasons == []
+    assert "Real user-level config since setup: unchanged" in report.lines
 
 
 def test_check_ignores_harness_runtime_files_and_the_audit_backup(tmp_path, real_home):
@@ -438,8 +566,10 @@ ENV_PROBE = (
     "CLAUDE_CONFIG_DIR",
     "CODEX_HOME",
     "GIT_CONFIG_GLOBAL",
+    "XDG_CONFIG_HOME",
     "GH_CONFIG_DIR",
 )
+TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
 
 
 def _expected_env(target: Path) -> dict[str, Path]:
@@ -450,8 +580,25 @@ def _expected_env(target: Path) -> dict[str, Path]:
         "CLAUDE_CONFIG_DIR": home / ".claude",
         "CODEX_HOME": home / ".codex",
         "GIT_CONFIG_GLOBAL": home / ".gitconfig",
+        "XDG_CONFIG_HOME": home / ".config",
         "GH_CONFIG_DIR": home / ".config" / "gh",
     }
+
+
+def _assert_stand_env(target: Path, lines: list[str]) -> list[str]:
+    """lines: the ENV_PROBE values, GIT_CONFIG_NOSYSTEM, each token's state, HOMEDRIVE +
+    HOMEPATH, then the working folder."""
+    got = dict(zip(ENV_PROBE, lines))
+    for name, path in _expected_env(target).items():
+        assert Path(got[name]).resolve() == path.resolve(), name
+    rest = lines[len(ENV_PROBE) :]
+    assert rest[0] == "1"
+    assert rest[1 : 1 + len(TOKENS)] == ["unset"] * len(TOKENS)
+    homedrive_path = rest[1 + len(TOKENS)]
+    if os.name == "nt":
+        assert Path(homedrive_path).resolve() == (target / "home").resolve()
+    assert Path(rest[2 + len(TOKENS)]).resolve() == (target / "repo").resolve()
+    return rest[3 + len(TOKENS) :]
 
 
 def test_env_sh_points_every_config_location_at_the_stand(
@@ -461,23 +608,22 @@ def test_env_sh_points_every_config_location_at_the_stand(
     assert bash, "bash is on every CI runner"
     target = tmp_path / "stand"
     stand.setup(target, "codex")
-    monkeypatch.setenv("GH_TOKEN", "should-be-unset")
+    for name in TOKENS:
+        monkeypatch.setenv(name, "should-be-unset")
     script = (
         f". '{(target / 'env.sh').as_posix()}'; "
         + "; ".join(f'printf "%s\\n" "${name}"' for name in ENV_PROBE)
-        + '; printf "%s\\n" "${GH_TOKEN-unset}"; git rev-parse --show-toplevel'
+        + '; printf "%s\\n" "$GIT_CONFIG_NOSYSTEM"; '
+        + "; ".join(f'printf "%s\\n" "${{{name}-unset}}"' for name in TOKENS)
+        + '; printf "%s\\n" "${HOMEDRIVE-}${HOMEPATH-}"'
+        + "; git rev-parse --show-toplevel"
     )
 
     out = subprocess.run(
         [bash, "-c", script], capture_output=True, text=True, check=True
     ).stdout
-    lines = out.splitlines()
 
-    got = dict(zip(ENV_PROBE, lines))
-    for name, path in _expected_env(target).items():
-        assert Path(got[name]).resolve() == path.resolve(), name
-    assert lines[len(ENV_PROBE)] == "unset"
-    assert Path(lines[len(ENV_PROBE) + 1]).resolve() == (target / "repo").resolve()
+    assert _assert_stand_env(target, out.splitlines()) == []
 
 
 def test_env_ps1_points_every_config_location_at_the_stand(
@@ -488,11 +634,18 @@ def test_env_ps1_points_every_config_location_at_the_stand(
         pytest.skip("no PowerShell here; GitHub's ubuntu runners have pwsh")
     target = tmp_path / "stand"
     stand.setup(target, "claude-code")
-    monkeypatch.setenv("GH_TOKEN", "should-be-unset")
+    for name in TOKENS:
+        monkeypatch.setenv(name, "should-be-unset")
     script = (
         f". '{target / 'env.ps1'}'; "
         + "; ".join(f"Write-Output $env:{name}" for name in ENV_PROBE)
-        + "; if ($null -eq $env:GH_TOKEN) { 'unset' } else { 'set' }; (Get-Location).Path"
+        + "; Write-Output $env:GIT_CONFIG_NOSYSTEM; "
+        + "; ".join(
+            f"if ($null -eq $env:{name}) {{ 'unset' }} else {{ 'set' }}"
+            for name in TOKENS
+        )
+        + "; Write-Output ('x' + $env:HOMEDRIVE + $env:HOMEPATH)"
+        + "; (Get-Location).Path; Write-Output $HOME; (Resolve-Path ~).Path"
     )
 
     out = subprocess.run(
@@ -502,12 +655,13 @@ def test_env_ps1_points_every_config_location_at_the_stand(
         check=True,
     ).stdout
     lines = [line for line in out.splitlines() if line.strip()]
+    marker = len(ENV_PROBE) + 1 + len(TOKENS)
+    lines[marker] = lines[marker][1:]  # the 'x' keeps an empty value on its own line
 
-    got = dict(zip(ENV_PROBE, lines))
-    for name, path in _expected_env(target).items():
-        assert Path(got[name]).resolve() == path.resolve(), name
-    assert lines[len(ENV_PROBE)] == "unset"
-    assert Path(lines[len(ENV_PROBE) + 1]).resolve() == (target / "repo").resolve()
+    # This shell's own $HOME and ~ point at the stand home too.
+    home_var, tilde = _assert_stand_env(target, lines)
+    assert Path(home_var).resolve() == (target / "home").resolve()
+    assert Path(tilde).resolve() == (target / "home").resolve()
 
 
 # --- canary scan ------------------------------------------------------------------------

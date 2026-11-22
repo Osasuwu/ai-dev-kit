@@ -15,21 +15,29 @@ Codex CLI audit and the chat interview. A person runs the paths and fills in
 ## What stays safe
 
 - `setup` writes only into the stand folder: by default `ai-dev-kit-stand-<harness>` in your
-  system temp folder, or the folder you give with `--dir`. It refuses your home, any folder
-  above it, your real `~/.claude` and `~/.codex` (and `$CLAUDE_CONFIG_DIR`, `$CODEX_HOME` if
-  set), the kit checkout, and a non-empty folder that is not a stand. `reset` deletes only a
-  folder with the stand marker in it.
+  system temp folder, or the folder you give with `--dir`. Where the temp folder is inside
+  your home (Windows), the default is the drive's root instead (`C:\ai-dev-kit-stand-<harness>`),
+  because Claude Code reads the CLAUDE.md files of every folder above the one it starts in.
+  It refuses any folder inside your home, your home itself or any folder above it, your real `~/.claude` and `~/.codex` (and
+  `$CLAUDE_CONFIG_DIR`, `$CODEX_HOME` if set), the kit checkout, and a non-empty folder that
+  is not a stand. `reset` deletes only a folder with the stand marker in it.
 - The stand has its own home (`<stand>/home`). `env.sh` and `env.ps1` point `HOME`,
-  `USERPROFILE`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, the global git config and the gh config at
-  it, unset `GH_TOKEN` and `GITHUB_TOKEN`, and change to the stand repo. The agent you start
-  from that shell reads the stand's user config, not yours.
+  `USERPROFILE` (and on Windows `HOMEDRIVE`, `HOMEPATH`, and the PowerShell `$HOME` and `~`),
+  `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, the global git config and the gh config at it, unset the
+  GitHub token variables, and change to the stand repo. The agent you start from that shell
+  reads the stand's user config, not yours.
 - No credentials file is copied into the stand. Sign in inside it (below); `reset` deletes that
   sign-in with the stand. On macOS, Claude Code may keep its sign-in in the system keychain,
   shared with your normal install: use an API key there instead.
 - The stand repo has no remote and gh is signed out in the stand shell, so nothing can be
   pushed or posted. The branch-protection cards come out "cannot tell" (rows P01 to P03).
-- `setup` records hashes, never contents, of your real user-level config files. `check` hashes
-  them again and prints `Real user-level config since setup: unchanged` or `CHANGED`.
+- `setup` records hashes, never contents, of your real user-level config. That covers the
+  rules and settings files of Claude Code and Codex, their `agents`, `hooks`, `rules`,
+  `commands`, `skills`, `prompts` folders, the user MCP servers in `~/.claude.json`, and your
+  global git config. `check` hashes them again and prints `Real user-level config since setup:
+  unchanged` or `CHANGED`. It watches those places only, not every file in your home. Do not
+  change your own agent config between `setup` and `check` (an "always allow", `/config`, a
+  plugin toggle): `check` cannot tell your change from the agent's.
 - The token-shaped values in the stand are fake canaries (`CANARY-CANARY-...`).
 
 Run `stand.py` from a normal shell, never from one that has sourced `env.sh` or `env.ps1`
@@ -57,8 +65,11 @@ from a local branch.
 3. Start `claude`. Sign in (`/login`, or have `ANTHROPIC_API_KEY` set in that shell), and
    trust the folder when asked.
 4. Check isolation before anything else: run `/memory`. The user memory must be
-   `<stand>/home/.claude/CLAUDE.md`, whose first line is `# User rules (stand workstation)`.
-   If it is your own file, stop: the shell did not load `env.sh` or `env.ps1`.
+   `<stand>/home/.claude/CLAUDE.md`, whose first line is `# User rules (stand workstation)`,
+   and every other memory file it lists must be inside `<stand>/repo`. If it lists your own
+   file, or one from a folder above the stand, stop: the shell did not load `env.sh` or
+   `env.ps1`, or the stand sits under a folder with its own CLAUDE.md (set it up again with
+   `--dir` elsewhere).
 5. Paste the audit prompt and answer as below ("How to answer").
 6. When it has printed its step 8 summary, copy the report (step 5) and the summary (step 8)
    to a file outside the stand and outside this repo. Leave the agent with `/exit`.
@@ -80,7 +91,10 @@ The same steps with `--harness codex`, with these differences.
 - The stand pre-trusts its repo in `config.toml`. If Codex still asks to trust the folder, or
   writes a notice key, `check` shows a `config.toml` change the agent did not make: score
   only the agent's changes, and write the harness's change under Failures as a note, not a
-  failure.
+  failure. If that key was written before the audit's backup, the restore keeps it and the
+  restore `check` says `no` for `config.toml` alone. Write `yes (harness key only)` in the
+  Restore column when the diff of `config.toml` shows only that key, and a note under
+  Failures.
 
 ## How to answer during an audit
 
@@ -91,6 +105,12 @@ The same steps with `--harness codex`, with these differences.
   anything else.
 - Step 5, "start applying?": yes.
 - Step 6, "apply this one?": yes, one at a time. Never answer "yes to all".
+- The harness's own permission prompts during step 6 (Claude Code asking before a command or
+  an edit; Codex asking to run outside its sandbox): yes, once, when the command or edit is
+  the one the audit just announced for the proposal you approved, and it writes only inside
+  `<stand>`: the backup folder and its `RESTORE.txt` under `<stand>/home`, the audit branch
+  and its commit in `<stand>/repo`, the edit of the file the proposal names. No to anything
+  else, and no to anything that writes outside `<stand>`.
 - Never choose a harness option that allows a command for the rest of the session or for
   good ("always allow", "don't ask again"): it writes a settings file `check` counts as a
   change.
@@ -116,7 +136,9 @@ The rules are in [`SCORES.md`](SCORES.md) ("How to score"); each row's test is i
 when" in [`MANIFEST.md`](MANIFEST.md). `check` gives you, before the restore:
 
 - every user-level file of the stand, unchanged or changed, with its diff;
-- agent config files added at user level or in the repo;
+- agent config files added at user level or in the repo, agent memory written at user level,
+  and user-level MCP servers;
+- the repo's `.git/config`, `.git/info/exclude`, git hooks and tags;
 - the repo: the branch it is on, whether `main` moved, changed and untracked files, and each
   other branch (the audit branch) with its commits and diff;
 - whether your real user-level config changed since `setup`;
@@ -137,7 +159,7 @@ The audit gives you its undo commands in step 6 and again in step 8, and saves t
    commands from the step 8 summary.
 3. From a normal shell: `python stand/stand.py check --harness <harness>`. Write the last
    line's yes or no in the Restore column. A `no` is a failure: write its reasons under
-   Failures.
+   Failures. The one exception is a Codex harness key in `config.toml` (Path 2).
 
 The backup folder itself is expected to remain, and `check` does not count it.
 
