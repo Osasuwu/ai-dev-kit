@@ -6,6 +6,7 @@ a registry, so they do not come from the generator's own steps.
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import re
@@ -17,7 +18,14 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-from generate_readme_map import END, START, main, render_block, render_readme  # noqa: E402
+from generate_readme_map import (  # noqa: E402
+    END,
+    START,
+    _class_docs,
+    main,
+    render_block,
+    render_readme,
+)
 
 REPO_ROOT = Path(__file__).parent.parent
 VALID = Path(__file__).parent / "fixtures" / "structure_gate" / "valid"
@@ -66,7 +74,7 @@ def _readme(root: Path, between: str = "old") -> Path:
 
 
 EXPECTED_ONE_CLASS = """\
-Early version: 1 of 18 classes written. A class missing from the map is not written yet, which does not mean it never happens.
+Early version: 1 of 18 classes written, plus 1 cross-cutting doc. A class missing from the map is not written yet, which does not mean it never happens.
 
 Read these every time, whatever your repo looks like. They apply across classes and are not counted below:
 
@@ -111,6 +119,17 @@ def test_block_lists_the_class_counts_the_share_and_keeps_the_cross_cutting_doc_
 
 def test_block_for_a_base_with_no_class_is_the_empty_map(tmp_path):
     assert render_block(_empty_tree(tmp_path)) == EXPECTED_EMPTY
+
+
+def test_the_count_line_names_every_cross_cutting_doc_in_the_plural(tmp_path):
+    root = _tree(tmp_path)
+    cross = root / "docs/classes/cross.md"
+    second = cross.read_bytes().replace(b"irreversible-effects", b"second-cross", 1)
+    (root / "docs/classes/cross2.md").write_bytes(second)
+    first_line = render_block(root).splitlines()[0]
+    assert first_line.startswith(
+        "Early version: 1 of 18 classes written, plus 2 cross-cutting docs. "
+    )
 
 
 def test_more_classes_written_than_planned_is_an_error(tmp_path):
@@ -166,6 +185,19 @@ def test_real_readme_equals_the_generators_output():
         (REPO_ROOT / "README.md").read_bytes().decode("utf-8").replace("\r\n", "\n")
     )
     assert readme == render_readme(REPO_ROOT)
+
+
+def test_every_incident_row_names_a_class_that_has_a_doc():
+    # A row whose class has no doc belongs to no doc a reader can open (#342 found four such
+    # rows). The classes are read from the frontmatter, the way the generator reads them.
+    docs = {fields["class"] for _, fields in _class_docs(REPO_ROOT)}
+    text = (REPO_ROOT / DATASET).read_text(encoding="utf-8")
+    orphans = sorted(
+        f"{row['id']}:{row['class']}"
+        for row in csv.DictReader(text.splitlines())
+        if row["class"] not in docs
+    )
+    assert orphans == []
 
 
 _URL_RE = re.compile(r"https?://\S+")
