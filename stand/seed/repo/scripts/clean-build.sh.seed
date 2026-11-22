@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Remove the build output before a release build.
+
+BUILD_DIR=$(python -c "import os; print(os.environ.get('STAND_BUILD_DIR', ''))")
+OUT_DIR=dist
+
+rm -rf "$BUILD_DIR"/*
+cd $OUT_DIR
+rm -f ./*.whl

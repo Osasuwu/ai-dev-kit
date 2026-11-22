@@ -1,0 +1,24 @@
+name: Triage new issues
+
+on:
+  issues:
+    types: [opened]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install the agent
+        run: npm install -g @anthropic-ai/claude-code@2.1.0
+      - name: Ask the agent for labels
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          claude -p "Triage this new issue and suggest labels. Title: ${{ github.event.issue.title }}. Body: ${{ github.event.issue.body }}" --allowedTools "Bash,Read" > triage.md
+          gh issue comment "${{ github.event.issue.number }}" --body-file triage.md

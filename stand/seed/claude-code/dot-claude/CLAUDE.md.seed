@@ -1,0 +1,210 @@
+# User rules (stand workstation)
+
+These rules apply in every project I open.
+
+## Everywhere
+
+- Answer in the language I write in.
+- Run the project's tests before you say a change is done, and show the last line of the run.
+- Ask before you add a dependency.
+- Never push to a shared branch.
+- Keep a change to one concern; put unrelated fixes in a list at the end of your answer.
+- Do not reformat lines the task does not touch.
+- When a command fails, show the error before you try something else.
+- Prefer small functions with names that say what they return.
+- Write commit messages in the imperative mood, under 72 characters in the first line.
+- If a task is ambiguous, ask one question before you start, not five after.
+- Do not leave commented-out code behind.
+- Keep secrets out of code, logs and commit messages.
+
+## Frontend (web/**, *.tsx, *.ts, *.css)
+
+- Use function components and hooks; no class components.
+- Keep component files under 200 lines; split by responsibility, not by size alone.
+- Co-locate a component's test next to it as `<Name>.test.tsx`.
+- Use the design tokens in `web/theme/` for colours and spacing; never hard-code a hex value.
+- Every interactive element needs an accessible name.
+- Use `<button>` for actions and `<a>` for navigation.
+- Do not add a state library; React state and context are enough here.
+- Fetch data through the hooks in `web/api/`, never with a bare `fetch` in a component.
+- Type every prop; no `any`, and no `as` casts without a comment saying why.
+- Keep CSS modules per component; no global selectors outside `web/theme/global.css`.
+- Lazy-load routes that are not on the first screen.
+- Format dates with the helpers in `web/lib/dates.ts`, never with `toLocaleString` directly.
+- Strings a user reads go through the translation helper `t()`.
+- Images get explicit width and height to avoid layout shift.
+- Run `npm run lint` and `npm test -- --run` before you say a frontend change is done.
+- Snapshot tests are not allowed; assert on what the user sees.
+- Do not disable an ESLint rule inline; fix the code or ask me.
+- Use `data-testid` only when no role or label can find the element.
+- Keep effects free of data transformation; derive values during render.
+- Debounce search inputs by 300 ms.
+
+## Django apps (backend/**, *.py under backend/)
+
+- One app per bounded context; do not import models across apps, use the service layer.
+- Every model change ships with its migration in the same commit.
+- Never edit a migration that has been released; add a new one.
+- Use `select_related` and `prefetch_related` where a view lists related objects.
+- Put business logic in `services.py`, not in views or serializers.
+- Views return serializers' data; no hand-built dicts.
+- Use the settings module `backend.settings.local` for local runs only.
+- Every endpoint needs a permission class; `AllowAny` needs a comment saying why.
+- Time zones: store UTC, convert at the edge.
+- Use `transaction.atomic` around writes that touch more than one table.
+- Tests use factories from `backend/tests/factories.py`, not fixtures in JSON.
+- Mark slow tests with `@pytest.mark.slow`.
+- Celery tasks must be idempotent; pass ids, not model instances.
+- Log with the module logger, never `print`.
+- Validate input in serializers, not in models' `save`.
+- Admin classes live in `admin.py` and register every model.
+- Management commands take `--dry-run` when they write.
+- Do not raise bare `Exception`; use the errors in `backend/core/errors.py`.
+- Keep URL names in snake case.
+- Pin new packages in `requirements/base.in` and recompile the lock.
+
+## Go services (services/**, *.go)
+
+- Wrap every returned error with context: `fmt.Errorf("load user %d: %w", id, err)`.
+- Pass `context.Context` as the first argument to anything that does I/O.
+- No package-level mutable state.
+- Table-driven tests for anything with more than two cases.
+- Use `errors.Is` and `errors.As`, never string matching on errors.
+- Keep interfaces small and defined where they are used.
+- Close every `io.Closer` with `defer` right after the error check.
+- Run `go vet ./...` and `staticcheck ./...` before you say a Go change is done.
+- Log with `slog`; key names in snake case.
+- Timeouts on every outbound HTTP client.
+- Goroutines need a way to stop; no fire-and-forget.
+- Prefer `sync.WaitGroup` or `errgroup` to channels for fan-out with errors.
+- Config comes from environment variables read once at start-up.
+- Do not use `init()` for anything but registering drivers.
+- Keep `main.go` under 50 lines; wiring only.
+- Generated files carry the `// Code generated ... DO NOT EDIT.` header.
+- Benchmarks for anything on the request path that allocates in a loop.
+- Use `time.Duration` for durations in APIs, never ints.
+- Return early; avoid `else` after a `return`.
+- Vendor nothing; use modules.
+
+## Terraform (infra/**, *.tf)
+
+- Run `terraform fmt` and `terraform validate` before you say an infra change is done.
+- Never run `terraform apply`; I apply.
+- Every resource gets the `owner` and `env` tags.
+- Pin provider versions with `~>` to a minor version.
+- Remote state only; never commit a `.tfstate` file.
+- Use modules from `infra/modules/`; do not copy resources between environments.
+- Variables have a description and a type.
+- Outputs that hold secrets are marked `sensitive = true`.
+- Security groups list ports explicitly; no `0.0.0.0/0` on anything but the load balancer.
+- Use `for_each` over `count` for anything with a stable key.
+- Name resources in snake case.
+- Keep one environment per directory under `infra/envs/`.
+- Data sources over hard-coded ids.
+- IAM policies are documents in `infra/policies/`, not inline JSON.
+- Plan output goes in the pull request description.
+- Lifecycle `prevent_destroy` on databases and buckets.
+- No provisioners.
+- Default to the smallest instance size that passes the load test.
+- Document every manual step in `infra/RUNBOOK.md`.
+- Destroying anything needs my yes in the chat first.
+
+## SQL migrations (migrations/**, *.sql)
+
+- One change per migration file.
+- Every migration has a down migration that has been run once locally.
+- Add columns as nullable, backfill, then add the constraint in a later migration.
+- Create indexes concurrently on tables over a million rows.
+- Never rename a column in one step; add, copy, switch, drop.
+- No data deletes in a schema migration.
+- Name files `YYYYMMDDHHMM_<what>.sql`.
+- Foreign keys get an index.
+- Use `timestamptz`, never `timestamp`.
+- Check the plan of any query you add with `EXPLAIN`.
+- Keep enum changes additive.
+- Lock timeouts at the top of each migration.
+- Test migrations against a copy of production size, not an empty database.
+- Default values on large tables are added without a rewrite.
+- Do not use `SELECT *` in views.
+- Primary keys are `bigint` identities.
+- Comments on tables and columns that are not obvious.
+- Partition only after measuring.
+- No triggers without my yes.
+- Grants go in their own migration.
+
+## iOS (ios/**, *.swift)
+
+- SwiftUI for new screens; UIKit only where SwiftUI has no equivalent.
+- No force unwraps outside tests.
+- View models are `@MainActor`.
+- Use `async`/`await`; no new completion handlers.
+- Strings go through `Localizable.strings`.
+- Images come from the asset catalogue.
+- Keep views under 150 lines; extract subviews.
+- Dependency injection through initialisers.
+- Run the unit tests on the latest two iOS versions before you say an iOS change is done.
+- No third-party UI libraries.
+- Use `Logger` with a subsystem and category.
+- Accessibility labels on every image button.
+- Dynamic Type must not truncate primary content.
+- Network calls go through `APIClient`.
+- Keychain for tokens, never `UserDefaults`.
+- Feature flags read from `FeatureFlags.swift`.
+- Previews for every view.
+- No storyboards.
+- Keep `Info.plist` keys sorted.
+- Crash-free rate is checked before every release.
+
+## Android (android/**, *.kt)
+
+- Jetpack Compose for new screens.
+- Coroutines with structured concurrency; no `GlobalScope`.
+- ViewModels expose `StateFlow`, never mutable state.
+- Hilt for dependency injection.
+- Strings in `strings.xml`.
+- No `!!` outside tests.
+- Room for local storage; migrations tested.
+- Run `./gradlew lint test` before you say an Android change is done.
+- Use `WorkManager` for deferrable background work.
+- Network through the Retrofit service in `data/api/`.
+- Content descriptions on every icon button.
+- Keep composables pure; side effects in `LaunchedEffect`.
+- Baseline profiles updated before a release.
+- No reflection-based serialization; use kotlinx.serialization.
+- ProGuard rules next to the module that needs them.
+- Feature modules do not depend on each other.
+- Use `Timber` for logging.
+- Encrypted shared preferences for tokens.
+- Test on the minimum SDK as well as the latest.
+- Screenshots in the pull request for any UI change.
+
+## Data notebooks (notebooks/**, *.ipynb)
+
+- Clear outputs before you commit a notebook.
+- Read data through `notebooks/lib/load.py`, never from a hard-coded path.
+- Pin the random seed at the top.
+- No credentials in a notebook, not even for a minute.
+- Move code used twice into `notebooks/lib/`.
+- Plots get titles and labelled axes.
+- Keep one question per notebook.
+- Record the data snapshot date in the first cell.
+- Use `pathlib` for paths.
+- Large intermediate files go in `data/cache/`, which git ignores.
+
+## Docs (docs/**, *.md)
+
+- One sentence per line in Markdown sources, so diffs stay small.
+- Headings in sentence case.
+- Every page starts with one paragraph saying who it is for.
+- Code blocks carry a language tag.
+- Link to the source file rather than copying code into a page.
+- Screenshots get alt text and a date in the file name.
+- Use relative links inside the docs folder.
+- Keep the changelog in `CHANGELOG.md`, newest first.
+- Spell out an abbreviation the first time a page uses it.
+- Run the link checker before you say a docs change is done.
+- Do not document internal endpoints in public docs.
+- Put a "last checked" date on any page that describes a third-party tool.
+- Keep tutorials runnable from a fresh clone.
+- Prefer a table to a long list of "if X then Y" sentences.
+- One page per task; split a page that answers two questions.

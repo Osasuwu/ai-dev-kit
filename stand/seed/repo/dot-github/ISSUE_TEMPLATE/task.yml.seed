@@ -1,0 +1,17 @@
+name: Task
+description: One change an agent or a person can pick up.
+labels: ["task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What to change
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: One line per criterion, each one a test could check. Say which ones can only be seen after a release.
+    validations:
+      required: true

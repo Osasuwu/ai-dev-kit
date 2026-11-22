@@ -1,0 +1,5 @@
+"""Turn titles into URL slugs."""
+
+from stand_app.slug import slugify
+
+__all__ = ["slugify"]

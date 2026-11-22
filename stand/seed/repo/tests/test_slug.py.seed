@@ -1,0 +1,16 @@
+import pytest
+
+from stand_app import slugify
+
+
+def test_words_are_joined_by_hyphens():
+    assert slugify("Hello World") == "hello-world"
+
+
+def test_punctuation_is_dropped():
+    assert slugify("Ship it, now!") == "ship-it-now"
+
+
+@pytest.mark.xfail(reason="accented letters are dropped, not transliterated")
+def test_accented_letters_are_transliterated():
+    assert slugify("Café au lait") == "cafe-au-lait"
