@@ -1,0 +1,487 @@
+{
+ "clusters": [
+  {
+   "key": "F-01",
+   "title": "RL-tuned small models beat far larger untuned models, mainly by fixing tool-use behavior",
+   "idea": "RL post-training on a small model closes or reverses the gap to models 10-100x larger, from InstructGPT's RLHF results to GRPO on 4B models for finance/SQL tasks. Recent talks locate the gain in behavioral discipline (inspecting schemas, not repeating failed queries) rather than knowledge, and stress how cheap it is (hundreds of dollars).",
+   "contested": false,
+   "cids": [
+    "c0651",
+    "c0657",
+    "c0721",
+    "c0722",
+    "c1878",
+    "c1880",
+    "c1881"
+   ]
+  },
+  {
+   "key": "F-02",
+   "title": "Fine-tune a small specialist only when economics or quality demand it",
+   "idea": "Whether to replace frontier-model prompting with a tuned small model. Some talks treat it as an economics decision that small open models now win on cost and latency (Ramp, AT&T, a 95%-small-model routing target); others call fine-tuning a last resort that carries ongoing debt and should wait until a mature narrow application hits API limits.",
+   "contested": true,
+   "cids": [
+    "c0065",
+    "c0531",
+    "c0653",
+    "c0925",
+    "c1032",
+    "c1510",
+    "c1476",
+    "c1701"
+   ]
+  },
+  {
+   "key": "F-03",
+   "title": "Production traces should become continual training signal for agents",
+   "idea": "Benchmarks saturate while production interactions are wasted; turn failed sessions, user feedback and process traces into SFT, distillation and RL data, and run it as a retrain-and-redeploy flywheel. Talks differ on the loop shape (outer feedback loop vs inner eval-climbing loop) and on the risks they flag: distribution shift, reward hacking, off-policy staleness.",
+   "contested": false,
+   "cids": [
+    "c0477",
+    "c0659",
+    "c0661",
+    "c1254",
+    "c1280",
+    "c0602",
+    "c0652",
+    "c0706"
+   ]
+  },
+  {
+   "key": "F-04",
+   "title": "Agent post-training is bottlenecked on realistic, replayable RL environments, not algorithms",
+   "idea": "The scarce resource for agent RL is environments that reproduce production conditions: real web tasks, cloud provisioning and live traffic, simulated tools, replayable orchestrator-plus-sandbox setups, and the rollout infrastructure to run them in parallel. Talks differ on whether to simulate the world or bring your own production harness.",
+   "contested": false,
+   "cids": [
+    "c0160",
+    "c0280",
+    "c0305",
+    "c0494",
+    "c0495",
+    "c0608",
+    "c0658",
+    "c0926"
+   ]
+  },
+  {
+   "key": "F-05",
+   "title": "Define an RL environment once and reuse it for evals, RL, SFT and distillation",
+   "idea": "An environment is a package of tasks, harness/interaction rules and a verifier/reward; built once, it scores models and produces training signal, so post-training becomes an iterate loop of build, score, read rollouts, train, deploy.",
+   "contested": false,
+   "cids": [
+    "c0498",
+    "c0529",
+    "c0530"
+   ]
+  },
+  {
+   "key": "F-06",
+   "title": "Curriculum and difficulty design shape what RL learns",
+   "idea": "Task difficulty (opponent strength, progressively harder exploit targets) and reward design determine whether RL learns; build a graded, reproducible curriculum and watch for instability from batch size and temperature.",
+   "contested": false,
+   "cids": [
+    "c0499",
+    "c0740"
+   ]
+  },
+  {
+   "key": "F-07",
+   "title": "RL works where outcomes are automatically verifiable, so turn tasks into verifiable ones",
+   "idea": "Code, search, OCR and similar domains train well because execution or reference checks give strict deterministic rewards (Verifier's Law); preference reward models are comparatively easy to game. The prescription is to convert fuzzy domains into context-specific verifiable tasks.",
+   "contested": false,
+   "cids": [
+    "c0306",
+    "c0617",
+    "c0928",
+    "c1393",
+    "c2093"
+   ]
+  },
+  {
+   "key": "F-08",
+   "title": "Rewards without ground truth (LLM judges, human preference) are needed but fragile",
+   "idea": "Most real agent tasks have no golden answer, so rewards come from judges, rubrics or rater preference; these invite reward hacking and optimize for what pleases raters (chatty assistants) rather than reliable action. Task difficulty must be calibrated to keep such rewards informative.",
+   "contested": false,
+   "cids": [
+    "c0606",
+    "c0607",
+    "c0927"
+   ]
+  },
+  {
+   "key": "F-09",
+   "title": "Dense, richer-than-scalar learning signals beat sparse rewards",
+   "idea": "Token-level on-policy self-distillation and LLM reflection over full traces and textual feedback give denser credit assignment than scalar RLHF/GRPO rewards, avoiding reward-shaping regressions and improving sample efficiency.",
+   "contested": false,
+   "cids": [
+    "c0163",
+    "c0660",
+    "c1935"
+   ]
+  },
+  {
+   "key": "F-10",
+   "title": "Generate training tasks synthetically, then filter hard: task fidelity beats task count",
+   "idea": "Build RL/SFT tasks programmatically from real structured sources (SEC tables, Wikidata random walks), overproduce and filter via programmatic checks, verifiers and expert review. Controlled results show high-fidelity tasks and verifier-filtered trajectories beat larger lower-quality sets.",
+   "contested": false,
+   "cids": [
+    "c1879",
+    "c1900",
+    "c1901",
+    "c1902",
+    "c0735",
+    "c1566"
+   ]
+  },
+  {
+   "key": "F-11",
+   "title": "Invest in data curation pipelines before scaling compute",
+   "idea": "Better data steepens scaling laws: dedupe, quality-filter, resample to the task distribution, caption and tag at scale, and check coverage. Talks cover text reasoning data (OpenThoughts), pretraining mixes and billion-image datasets, often distilling a large model into a cheap filter.",
+   "contested": false,
+   "cids": [
+    "c0281",
+    "c0282",
+    "c0283",
+    "c0857",
+    "c0858",
+    "c0859"
+   ]
+  },
+  {
+   "key": "F-12",
+   "title": "Synthetic data: complement to organic data or a threat to diversity",
+   "idea": "One view: synthetic rephrasing regularizes presentation, fills under-represented formats and beats seeds-only training, while hard quality filters backfire through repetition. The opposing view avoids synthetic training images to preserve unconventional styles and aesthetic diversity.",
+   "contested": true,
+   "cids": [
+    "c0795",
+    "c0796",
+    "c0856"
+   ]
+  },
+  {
+   "key": "F-13",
+   "title": "Distil a slow strong model into a small fast student for the narrow task",
+   "idea": "Use a frontier model or VLM as teacher/labeler, repair or review its outputs, and train a small low-latency model to deploy instead; watch for judge disagreement and wrong augmentations.",
+   "contested": false,
+   "cids": [
+    "c0457",
+    "c2036",
+    "c2037"
+   ]
+  },
+  {
+   "key": "F-14",
+   "title": "Coding agents can run the fine-tuning workflow themselves",
+   "idea": "Agents with skills/MCP can pick data, configure and launch fine-tuning jobs from a plain-language request, hill-climb against evals with synthetic data, and increasingly automate parts of ML research.",
+   "contested": false,
+   "cids": [
+    "c0586",
+    "c0605",
+    "c0668",
+    "c1027"
+   ]
+  },
+  {
+   "key": "F-15",
+   "title": "Continual learning is a design space: pick the layer and data regime per failure",
+   "idea": "Agents can be improved in weights, harness or memory, from offline or on-policy data, via SFT, RL, LoRA or prompt optimization. Talks propose axes (replayability, lifelongness, efficiency; hints vs traces) for picking per failure, with regression-gated replayable environments.",
+   "contested": false,
+   "cids": [
+    "c0161",
+    "c0273",
+    "c0274"
+   ]
+  },
+  {
+   "key": "F-16",
+   "title": "Fine-tune tiny models for narrow on-device tasks and measure on the target hardware",
+   "idea": "A tiny model fine-tuned (often on synthetic data) for one function-calling or agent task can go from unreliable to ~90% accurate on devices like a Raspberry Pi; quantization, runtime choice, small guardrail models and memory limits must be tuned on the actual device.",
+   "contested": false,
+   "cids": [
+    "c0349",
+    "c0847",
+    "c0955",
+    "c0956"
+   ]
+  },
+  {
+   "key": "F-17",
+   "title": "Spend offline compute to move a private corpus into the model",
+   "idea": "Models lack post-cutoff, long-tail and private knowledge; spend compute offline on the corpus (sleep-time compute) and transfer it via KV compaction or on-policy distillation.",
+   "contested": false,
+   "cids": [
+    "c0646",
+    "c0647"
+   ]
+  },
+  {
+   "key": "F-18",
+   "title": "Pretraining is being reshaped to produce good RL starting points",
+   "idea": "Pretraining mixes shift toward code, reasoning and long-context agent data, and SFT-style examples move earlier, so base models are built for post-training.",
+   "contested": false,
+   "cids": [
+    "c0760",
+    "c0761"
+   ]
+  },
+  {
+   "key": "F-19",
+   "title": "Train text and vision together from the first step",
+   "idea": "Bolting vision onto a pretrained text model degrades text ability or is fragile; joint multimodal training from scratch nearly preserves text performance.",
+   "contested": false,
+   "cids": [
+    "c1060",
+    "c1299"
+   ]
+  },
+  {
+   "key": "F-20",
+   "title": "Faithful population simulation needs real-distribution training, not persona prompts or preference tuning",
+   "idea": "Fine-tuning on real survey response distributions matches populations better than persona prompting, while preference optimization can make persona outputs more pleasing but less faithful (concealing anachronism).",
+   "contested": false,
+   "cids": [
+    "c0569",
+    "c0800"
+   ]
+  },
+  {
+   "key": "F-21",
+   "title": "LLM recommenders over semantic item IDs",
+   "idea": "Represent catalog items as semantic IDs so an LLM natively generates recommendations, training on language plus catalog data in stages that keep language steerability.",
+   "contested": false,
+   "cids": [
+    "c1150",
+    "c1318",
+    "c1319"
+   ]
+  },
+  {
+   "key": "F-22",
+   "title": "Pretrain a foundation model on transaction sequences",
+   "idea": "Next-transaction prediction over billions of transactions, with tokenization of amounts, time gaps and locations as the central challenge; it needed more tokens per parameter than Chinchilla and beat an XGBoost fraud baseline.",
+   "contested": false,
+   "cids": [
+    "c1246",
+    "c1247",
+    "c1248"
+   ]
+  },
+  {
+   "key": "F-23",
+   "title": "Frontier VLMs pattern-match instead of reasoning visually; fixing needs specialized data",
+   "idea": "Counting, spatial grounding and video state tracking fail; scale alone won't fix it, specialized and synthetic data, architecture changes and visual chain of thought will.",
+   "contested": false,
+   "cids": [
+    "c1558",
+    "c1559"
+   ]
+  },
+  {
+   "key": "F-24",
+   "title": "Learn training fundamentals by training a tiny GPT from scratch",
+   "idea": "A ~10M-parameter GPT on a laptop teaches tokenizer, architecture, LR schedule and overfitting; sanity-check initial loss against uniform-over-vocab and watch train/val divergence.",
+   "contested": false,
+   "cids": [
+    "c0851",
+    "c0852"
+   ]
+  },
+  {
+   "key": "F-25",
+   "title": "Cascaded STT-LLM-TTS pipelines vs native speech-to-speech and full-duplex models",
+   "idea": "One camp says cascades are half-duplex walkie-talkies that lose paralinguistic cues and latency, so native audio and full-duplex models (Moshi, Gemini Live, joint audio-video-text models) are required. Others hold that open cascaded stacks are good enough now, and single multimodal calls already replace multi-service batch audio pipelines.",
+   "contested": true,
+   "cids": [
+    "c0539",
+    "c0540",
+    "c1791",
+    "c1860",
+    "c1761",
+    "c0595",
+    "c0372"
+   ]
+  },
+  {
+   "key": "F-26",
+   "title": "In voice, latency beats IQ: a small fast talker with reasoning moved elsewhere",
+   "idea": "A one-second pause feels broken and a smarter answer doesn't compensate, so voice turns go to small low-latency models. Hard work moves out of the talking model into state machines, background text LLMs or per-turn routing, at the cost of strict guardrails against drift.",
+   "contested": false,
+   "cids": [
+    "c0893",
+    "c1046",
+    "c1047",
+    "c1048",
+    "c1412",
+    "c1792"
+   ]
+  },
+  {
+   "key": "F-27",
+   "title": "Hide voice latency by streaming and overlapping every stage",
+   "idea": "Use true streaming STT, start TTS while the LLM is still streaming, transcribe speculatively, run tools asynchronously, play cached prefixes and colocate models, optimizing perceived rather than total latency.",
+   "contested": false,
+   "cids": [
+    "c0308",
+    "c0309",
+    "c0972",
+    "c1388",
+    "c1524"
+   ]
+  },
+  {
+   "key": "F-28",
+   "title": "Measure audible response time from the user's last syllable, against human turn-taking norms",
+   "idea": "Humans switch turns in ~200 ms; ~600 ms feels human and ~1.5 s is the edge of conversational. Dashboard latency misleads because TTS leading silence and first-sentence time dominate.",
+   "contested": false,
+   "cids": [
+    "c0289",
+    "c1523",
+    "c1823"
+   ]
+  },
+  {
+   "key": "F-29",
+   "title": "Turn detection and interruption handling make or break voice agents",
+   "idea": "Layer audio-aware turn classifiers (rhythm, pitch, intonation) over VAD or provider endpointing, and cancel in-flight LLM/TTS output immediately on barge-in; measured cutoffs halved (4.5% vs 9.9%) at equal latency.",
+   "contested": false,
+   "cids": [
+    "c0290",
+    "c0291",
+    "c1525",
+    "c1826",
+    "c0822"
+   ]
+  },
+  {
+   "key": "F-30",
+   "title": "Judge voice agents end-to-end on real audio and outcomes, not component scores or transcripts",
+   "idea": "Component leaderboards and clean transcripts hide dead air, overlap, mishearing and confirmed-but-never-executed actions; benchmark the whole stack with simulated callers, link audio to tool traces, and verify downstream side effects across interdependent layers.",
+   "contested": false,
+   "cids": [
+    "c1522",
+    "c1825",
+    "c1458",
+    "c1056",
+    "c1849"
+   ]
+  },
+  {
+   "key": "F-31",
+   "title": "Voice-captured data is structured extraction: schema up front, confirm before sync",
+   "idea": "Treat call data like a typed form with field-level evaluation; LLM summarization and extraction cut after-call work, with PII masked early, channels kept separate, and operator confirmation before CRM sync.",
+   "contested": false,
+   "cids": [
+    "c0896",
+    "c0897",
+    "c2116"
+   ]
+  },
+  {
+   "key": "F-32",
+   "title": "Open-weight TTS is now viable for real-time and on-device voice",
+   "idea": "Small open TTS models run on CPU, reach sub-200 ms first-token latency and clone voices from short samples, removing cloud cost and latency.",
+   "contested": false,
+   "cids": [
+    "c0541",
+    "c0594",
+    "c0973"
+   ]
+  },
+  {
+   "key": "F-33",
+   "title": "Direct synthetic voices with natural-language descriptions",
+   "idea": "Prompt TTS for style, emotion and accent, or generate a character voice from a text description of era, culture and personality.",
+   "contested": false,
+   "cids": [
+    "c0373",
+    "c0453"
+   ]
+  },
+  {
+   "key": "F-34",
+   "title": "Add voice as an interface layer over an agent's existing tools",
+   "idea": "Keep the agent's orchestration, retrieval and tools, and add speech in/out around it; voice can trigger tools mid-conversation and need not always talk back (speech-to-action, event-to-speech).",
+   "contested": false,
+   "cids": [
+    "c0396",
+    "c1506",
+    "c1861"
+   ]
+  },
+  {
+   "key": "F-35",
+   "title": "Speaker diarization matters for transcripts fed to LLMs",
+   "idea": "Plain STT loses who spoke and overlaps; combine diarization with transcripts and measure it with DER.",
+   "contested": false,
+   "cids": [
+    "c0151",
+    "c0152"
+   ]
+  },
+  {
+   "key": "F-36",
+   "title": "Don't trust generic ASR transcripts: domain-tune or clean them before acting",
+   "idea": "Generic ASR fails on domain terms like drug names; fine-tune it or clean unreliable transcripts before the agent acts.",
+   "contested": false,
+   "cids": [
+    "c0052",
+    "c2118"
+   ]
+  },
+  {
+   "key": "F-37",
+   "title": "Robotics follows the LLM recipe: generalist pretraining on video and simulation, then teleop post-training",
+   "idea": "One embodied foundation model across bodies, pretrained on web/human/gameplay video or simulation with sparse supervision, post-trained with teleoperation. Talks differ on the video vs teleop tradeoff and on where training video comes from.",
+   "contested": false,
+   "cids": [
+    "c1594",
+    "c1285",
+    "c1287",
+    "c1491",
+    "c0154",
+    "c1581"
+   ]
+  },
+  {
+   "key": "F-38",
+   "title": "Physical-world reliability: learned policies with failure-targeted data vs modular tool-based autonomy",
+   "idea": "Demos are easy, reliability is hard. One approach fine-tunes generalist policies and uses reward models to target recovery data at failures; others keep modular edge/cloud autonomy and let LLM/VLM agents pick among existing robot tools. Both feed fleet data back into models.",
+   "contested": true,
+   "cids": [
+    "c1693",
+    "c1694",
+    "c2053",
+    "c1889",
+    "c2054"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0048",
+  "c0162",
+  "c0327",
+  "c0733",
+  "c0746",
+  "c0965",
+  "c1392",
+  "c1843",
+  "c1936",
+  "c0051",
+  "c0354",
+  "c0812",
+  "c0892",
+  "c0943",
+  "c0971",
+  "c1780",
+  "c1863",
+  "c2117",
+  "c0593",
+  "c1286",
+  "c1501",
+  "c1502",
+  "c2088"
+ ],
+ "noise": [
+  "c0199"
+ ]
+}

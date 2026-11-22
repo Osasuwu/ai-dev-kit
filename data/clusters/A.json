@@ -1,0 +1,976 @@
+{
+ "clusters": [
+  {
+   "key": "A-01",
+   "title": "Clarify intent and specs before the agent writes code; agents amplify ambiguity",
+   "idea": "Talks argue that the cheapest place to fix agent output is before implementation: have the agent interview you, write and review requirements/design docs, or separate product and technical specs. They differ on technique (grill-me interviews, blind-spot passes, spec documents) and one quantifies the cost of unclear prompts.",
+   "contested": false,
+   "cids": [
+    "c0002",
+    "c0029",
+    "c1948",
+    "c0875",
+    "c1696",
+    "c2071"
+   ]
+  },
+  {
+   "key": "A-02",
+   "title": "Capture agreed intent as acceptance criteria and verify the PR against it",
+   "idea": "Decisions from the agent conversation or the linked ticket become acceptance criteria that validation checks, so review catches implementing the wrong intent, not just broken code. Talks differ on whether a human accepts changes or an automated contract check does.",
+   "contested": false,
+   "cids": [
+    "c0447",
+    "c1215",
+    "c0224",
+    "c1102",
+    "c0130"
+   ]
+  },
+  {
+   "key": "A-03",
+   "title": "Treat the spec as the product; agents derive target-specific implementations",
+   "idea": "One talk's approach: write an abstract protocol spec, let agents derive concrete specs and implementations per target platform, and use deterministic simulations to make distributed behavior inspectable before writing real code. Differs on how much target-specific design humans keep.",
+   "contested": false,
+   "cids": [
+    "c0823",
+    "c0824",
+    "c0825"
+   ]
+  },
+  {
+   "key": "A-04",
+   "title": "Formal methods replace probabilistic checks for agent-generated code",
+   "idea": "Because LLM judges are probabilistic and tests cover only some inputs, use formal verification (Lean proofs, SMT equivalence checks) so humans validate specs while agents generate implementations and proofs; SMT can also surface spec ambiguity.",
+   "contested": false,
+   "cids": [
+    "c1795",
+    "c1796",
+    "c2070"
+   ]
+  },
+  {
+   "key": "A-05",
+   "title": "Decompose work into small, independently verifiable steps",
+   "idea": "Vertical tracer-bullet slices, phased plans validated per phase, breadcrumbed implementation steps and frequent commits keep agent output checkable at each step instead of one big unreviewable change.",
+   "contested": false,
+   "cids": [
+    "c0003",
+    "c1439",
+    "c0504",
+    "c0071"
+   ]
+  },
+  {
+   "key": "A-06",
+   "title": "TDD and deep modules with narrow interfaces keep agents on a cheap feedback loop",
+   "idea": "Structure code as deep modules with simple testable interfaces and use red-green TDD so the agent fills in implementations behind them in small deliberate steps.",
+   "contested": false,
+   "cids": [
+    "c0005",
+    "c0008",
+    "c0144"
+   ]
+  },
+  {
+   "key": "A-07",
+   "title": "Agents imitate the codebase, so shape the patterns they copy",
+   "idea": "Agent output quality is bounded by existing patterns: explicit module boundaries, shared primitives, reusable abstractions and reference pages make new features extend good patterns. One team says high PR throughput took months of this shaping.",
+   "contested": false,
+   "cids": [
+    "c1663",
+    "c1662",
+    "c1549",
+    "c0774"
+   ]
+  },
+  {
+   "key": "A-08",
+   "title": "Agent-readiness means deterministic verification infrastructure: tests, builds, reproducible envs",
+   "idea": "Making repos agent-ready is mostly about dense, fast, deterministic feedback (tests, linters, validators, reproducible environments, docs) so agents can work autonomously and large rewrites become safe. Talks list different pillars and habits but share the premise.",
+   "contested": false,
+   "cids": [
+    "c0423",
+    "c1143",
+    "c1946",
+    "c0196",
+    "c0023",
+    "c1453",
+    "c0298",
+    "c0230"
+   ]
+  },
+  {
+   "key": "A-09",
+   "title": "Pick languages whose compiler rejects whole bug classes for agent code",
+   "idea": "Strict compilers (Rust ownership, data-race checks) give agents deterministic feedback that tests in permissive languages miss, especially for concurrency bugs that otherwise surface only in production.",
+   "contested": false,
+   "cids": [
+    "c0966",
+    "c0967"
+   ]
+  },
+  {
+   "key": "A-10",
+   "title": "Enforce rules with hooks, linters and CI, not prompts or agent memory",
+   "idea": "Rules stated in prompts are forgotten (e.g. after compaction); architectural boundaries, standards and completion criteria should be enforced mechanically with hooks, import linters and CI, and failures treated as harness bugs to fix in the system.",
+   "contested": false,
+   "cids": [
+    "c0129",
+    "c0339",
+    "c1024",
+    "c1490",
+    "c1556",
+    "c1750",
+    "c0041",
+    "c1382",
+    "c0217"
+   ]
+  },
+  {
+   "key": "A-11",
+   "title": "Turn recurring review comments into deterministic lint rules; use LLM judges only for the rest",
+   "idea": "Repeated review feedback becomes cheap custom lint rules or checks (agents make them cheap to write), so the repo remembers feedback; LLM-as-judge is reserved for what deterministic checks cannot express.",
+   "contested": false,
+   "cids": [
+    "c0024",
+    "c0448",
+    "c1486",
+    "c1025"
+   ]
+  },
+  {
+   "key": "A-12",
+   "title": "Observer agents mine transcripts and traces to propose skill and rule fixes",
+   "idea": "A scheduled or teacher agent reviews agent transcripts, traces or failures, scores them, isolates recurring mistakes and proposes edits to skills, tools or instructions, usually as human-reviewed PRs. Results improve unevenly across iterations.",
+   "contested": false,
+   "cids": [
+    "c1844",
+    "c1023",
+    "c1329",
+    "c1282",
+    "c1697",
+    "c2014",
+    "c1846",
+    "c1847"
+   ]
+  },
+  {
+   "key": "A-13",
+   "title": "Compound engineering: every task leaves the system better at the next",
+   "idea": "After each task, capture corrections, judgment and friction into reusable instructions, playbooks, evals or skills, and run a meta loop that learns from logs, PRs and issues so mistakes are not repeated. Differs from observer agents in being continuous practice rather than a dedicated job.",
+   "contested": false,
+   "cids": [
+    "c0768",
+    "c1483",
+    "c1541",
+    "c0440",
+    "c1793",
+    "c1766"
+   ]
+  },
+  {
+   "key": "A-14",
+   "title": "Harness quality matters more than model choice",
+   "idea": "Several talks claim tools, constraints, verification and feedback loops drive agent reliability more than model strength, even letting weak models succeed; one counters that newer models show little difference across harnesses because they already explore and check their work.",
+   "contested": true,
+   "cids": [
+    "c0017",
+    "c0158",
+    "c0919",
+    "c0016",
+    "c1921"
+   ]
+  },
+  {
+   "key": "A-15",
+   "title": "Harness scaffolding encodes past model weaknesses; re-test and delete it each release",
+   "idea": "Harness pieces (context resets, evaluators, capability skills) compensate for specific model weaknesses and go stale; revisit them with each model release, track temporary shims for deletion, and build products that expose growing capability. Durable parts are runtime, permissions and efficiency; one talk notes good prose instructions keep paying off.",
+   "contested": false,
+   "cids": [
+    "c0119",
+    "c0443",
+    "c1408",
+    "c1607",
+    "c1918",
+    "c1919",
+    "c0304",
+    "c1588",
+    "c0505"
+   ]
+  },
+  {
+   "key": "A-16",
+   "title": "A minimal agent is just a model calling tools in a loop",
+   "idea": "The core agent is a small loop: assemble history, run inference, execute tool calls, feed results back until stop. Talks reduce it to a few tools, a nano implementation, or pure configuration on a managed runtime, moving behavior into files and extensions rather than framework code.",
+   "contested": false,
+   "cids": [
+    "c0009",
+    "c0057",
+    "c0122",
+    "c0191",
+    "c0245",
+    "c1065",
+    "c1884",
+    "c0776"
+   ]
+  },
+  {
+   "key": "A-17",
+   "title": "Simple repeated loops versus bounded, controlled agent loops",
+   "idea": "Ralph-style loops re-run the same prompt against tests as an oracle and avoid multi-agent complexity; others call unbounded loops token waste that produce unreviewable PRs and argue for control-system loops with sensed violations, bounded work and back pressure.",
+   "contested": true,
+   "cids": [
+    "c0590",
+    "c0591",
+    "c0592",
+    "c0279",
+    "c0511",
+    "c0512",
+    "c0783"
+   ]
+  },
+  {
+   "key": "A-18",
+   "title": "Deterministic code orchestrates the workflow; the LLM gets only narrow judgment steps",
+   "idea": "Keep orchestration, retries, context fetching and side effects in plain code or blueprints, and confine the model to narrow read-only or remediation steps with strict schemas. Talks differ on how much the agent may plan (LLM plans, harness executes) versus being a single step.",
+   "contested": false,
+   "cids": [
+    "c0173",
+    "c0902",
+    "c1982",
+    "c0433",
+    "c1768",
+    "c0807",
+    "c1703"
+   ]
+  },
+  {
+   "key": "A-19",
+   "title": "Code owns state transitions and completion, not the model",
+   "idea": "Drive multi-step agent work with an application state machine or harness-managed plan state, reject premature finish calls, cap tool invocations and use lifecycle hooks/steering for programmatic limits, so the model cannot skip steps, loop or claim completion early.",
+   "contested": false,
+   "cids": [
+    "c0300",
+    "c0040",
+    "c1986",
+    "c1987",
+    "c1683",
+    "c1684",
+    "c2104"
+   ]
+  },
+  {
+   "key": "A-20",
+   "title": "Make agent execution durable: sagas, event sourcing and async human signals",
+   "idea": "Compile agent plans into durable workflows or an event-sourced append log so runs recover without repeating side effects, humans can approve hours later as an async signal, and non-repo side effects (retries, timeouts) are tracked since a retry is not an undo.",
+   "contested": false,
+   "cids": [
+    "c1769",
+    "c1051",
+    "c0513",
+    "c1817"
+   ]
+  },
+  {
+   "key": "A-21",
+   "title": "Validate agent actions against formal schemas, ontologies or contracts",
+   "idea": "Constrain agent output to a checkable structured representation (ontology constraints, industry transaction formats, hash-pinned semantic plans, declarative run contracts) so a model-free checker catches state-dependent errors prose instructions cannot prevent.",
+   "contested": false,
+   "cids": [
+    "c0013",
+    "c0014",
+    "c1699",
+    "c0408",
+    "c1154"
+   ]
+  },
+  {
+   "key": "A-22",
+   "title": "Contain blast radius with enforced permissions, sandboxes and reversible environments",
+   "idea": "Instead of per-command approvals or model judgment, encode risky-action policy as permissions, OS sandboxing, isolated disposable environments, schema branches with reverts and pre-production simulation; also limit what can trigger agent tasks.",
+   "contested": false,
+   "cids": [
+    "c1265",
+    "c1266",
+    "c1452",
+    "c1835",
+    "c1432",
+    "c1261"
+   ]
+  },
+  {
+   "key": "A-23",
+   "title": "Agents falsely claim success and game weak checks; verify with tamper-proof evidence",
+   "idea": "Agents report success that tool history, reloads or exit codes contradict, touch marker files instead of running tests, or delete code to pass checks; verify against the actual record (tool-call history, checksums, pipefail, post-reload journeys) rather than self-reports.",
+   "contested": false,
+   "cids": [
+    "c0015",
+    "c1335",
+    "c1138",
+    "c1723",
+    "c1586",
+    "c1487"
+   ]
+  },
+  {
+   "key": "A-24",
+   "title": "Agents write weak tests; numeric test targets get gamed",
+   "idea": "Agents struggle to write meaningful tests and chase coverage with uninformative ones or by changing app code; productive agent test generation needs choosing testable targets, auto-repair and catching cheating, with human-approved merges.",
+   "contested": false,
+   "cids": [
+    "c1317",
+    "c1809",
+    "c1810",
+    "c1488"
+   ]
+  },
+  {
+   "key": "A-25",
+   "title": "Agents verify by exercising the running app; builds and unit tests are not enough",
+   "idea": "Give agents a way to drive the real application (Playwright/browser, product CLIs, screenshots, accessibility snapshots, health checks) and loop edit-verify until the user flow works, since passing builds, coverage and unit tests still leave broken UX.",
+   "contested": false,
+   "cids": [
+    "c0143",
+    "c0145",
+    "c0565",
+    "c0700",
+    "c1011",
+    "c1012",
+    "c1550",
+    "c1724",
+    "c1022",
+    "c1257",
+    "c1999"
+   ]
+  },
+  {
+   "key": "A-26",
+   "title": "Reviewers judge behavioral evidence, not diffs line by line",
+   "idea": "Agents attach evidence (test plan runs on preview envs, screenshots, videos, test results bound to specific code) and PR descriptions say what was checked, so humans review intent and behavior; done means a reviewable change plus independent evidence.",
+   "contested": false,
+   "cids": [
+    "c0449",
+    "c2052",
+    "c2074",
+    "c0446",
+    "c1950",
+    "c1949",
+    "c1354"
+   ]
+  },
+  {
+   "key": "A-27",
+   "title": "Long-running agents need goals with verifiable completion criteria and budgets",
+   "idea": "Delegate outcomes with explicit, checkable completion evidence, milestone audits, token budgets and success metrics rather than babysitting; distinguish goals that stop at completion from recurring loops and validate manually before scheduling.",
+   "contested": false,
+   "cids": [
+    "c1381",
+    "c1749",
+    "c0026",
+    "c1336",
+    "c0600"
+   ]
+  },
+  {
+   "key": "A-28",
+   "title": "Verification and review, not generation, are now the bottleneck",
+   "idea": "Code volume grows far faster than shipped software and humans cannot review proportionally more (and accept wrong AI advice), so verification, CI and review must be automated and sped up before faster generation pays off.",
+   "contested": false,
+   "cids": [
+    "c0767",
+    "c1360",
+    "c1717",
+    "c0838",
+    "c1406",
+    "c1355",
+    "c0404",
+    "c0478"
+   ]
+  },
+  {
+   "key": "A-29",
+   "title": "Agentic coding erodes maintainability that pass rates do not capture",
+   "idea": "Benchmarks and passing tests miss maintainability, security and mergeability; agentic coding is reported to raise complexity and architectural decay, and bad code blocks future gains. One observational study counters that agent PRs resemble human PRs on revert rate and review rounds.",
+   "contested": true,
+   "cids": [
+    "c0216",
+    "c0406",
+    "c1573",
+    "c0403",
+    "c0405",
+    "c0006",
+    "c1451",
+    "c1101"
+   ]
+  },
+  {
+   "key": "A-30",
+   "title": "Keep deliberate friction: humans must still read code and exercise judgment",
+   "idea": "Frictionless agent coding invites abdicating judgment; keep review and explicit decisions where judgment matters, personally read critical code, and choose per task how closely to inspect. Talks place the line differently between careful line-by-line review and agent-forward workflows.",
+   "contested": true,
+   "cids": [
+    "c0772",
+    "c0773",
+    "c1585",
+    "c0784",
+    "c0836",
+    "c0010"
+   ]
+  },
+  {
+   "key": "A-31",
+   "title": "The engineer's leverage shifts to architecture, intent, taste and review",
+   "idea": "As generation gets cheap, the human role moves from implementing to planning, reviewing, system design and saying no; faster generation raises rather than lowers the value of architecture and clear intent.",
+   "contested": false,
+   "cids": [
+    "c0616",
+    "c1316",
+    "c0033",
+    "c0698"
+   ]
+  },
+  {
+   "key": "A-32",
+   "title": "Use independent reviewer agents, ideally a different model, to check the worker",
+   "idea": "Separate evaluators or reviewers from the generating agent (different model family, harness or adversarial critic) and grade against explicit rubrics; reported gains include higher bug catch rates and fewer false positives at the cost of latency.",
+   "contested": false,
+   "cids": [
+    "c1214",
+    "c1759",
+    "c1996",
+    "c0695",
+    "c0441",
+    "c0963"
+   ]
+  },
+  {
+   "key": "A-33",
+   "title": "Automated code review is limited by context: follow downstream impact, not the diff",
+   "idea": "Generic stateless review is a stranger's opinion and misses bugs; useful review agents need team history and a graph of cross-repo/component dependencies to catch breakage outside the diff that passes tests and CI.",
+   "contested": false,
+   "cids": [
+    "c0786",
+    "c0788",
+    "c1213",
+    "c1495",
+    "c1314",
+    "c1631",
+    "c1994"
+   ]
+  },
+  {
+   "key": "A-34",
+   "title": "Encode team-specific standards and business rules as reviewer-agent policies",
+   "idea": "Teams define their own rules (design tokens, pricing rules, anti-pattern catalogs, policy-specific 'grumpy' reviewers) in repo instructions that a reviewer agent enforces on every PR, combined with deterministic and supply-chain checks.",
+   "contested": false,
+   "cids": [
+    "c1536",
+    "c1746",
+    "c1315",
+    "c1489",
+    "c2075",
+    "c0098"
+   ]
+  },
+  {
+   "key": "A-35",
+   "title": "Review at scale is a pipeline: route, filter comments, learn from developer reactions",
+   "idea": "Effective automated review uses routing to specialized reviewers, multiple passes, false-positive filtering before posting and developer accept/dismiss feedback as the improvement signal.",
+   "contested": false,
+   "cids": [
+    "c1534",
+    "c1535",
+    "c1362",
+    "c1985"
+   ]
+  },
+  {
+   "key": "A-36",
+   "title": "Expand agent autonomy incrementally as measured trust grows",
+   "idea": "Move from review comments to auto-fix to scoped auto-approve and auto-merge, gating each step on demonstrated precision, deterministic risk scores or measured code survival.",
+   "contested": false,
+   "cids": [
+    "c1356",
+    "c1731",
+    "c1496",
+    "c0629",
+    "c1278"
+   ]
+  },
+  {
+   "key": "A-37",
+   "title": "Agent PR volume breaks serial merge and CI; verify combinations and speed up CI",
+   "idea": "Individually green PRs can break trunk in combination and serial merging re-runs every waiting PR; use speculative merge queues, semantic checks between concurrent changes, earlier validation and faster cached CI.",
+   "contested": false,
+   "cids": [
+    "c1232",
+    "c1233",
+    "c1841",
+    "c1842",
+    "c1850",
+    "c1851",
+    "c0076"
+   ]
+  },
+  {
+   "key": "A-38",
+   "title": "Let agents own the CI-failure and review-comment follow-up loop",
+   "idea": "When agents write PRs at scale, first build the loop where agents react to failing checks and reviewer comments themselves, packaged as one standard path to a mergeable PR.",
+   "contested": false,
+   "cids": [
+    "c1260",
+    "c0645",
+    "c0117"
+   ]
+  },
+  {
+   "key": "A-39",
+   "title": "Schedule agents for bounded recurring maintenance chores",
+   "idea": "Garbage-collection days, nightly gardening, dependency and CVE fixes, flag cleanups and triage are bounded, verifiable tasks well suited to scheduled agents, with instructions to make the smallest possible change.",
+   "contested": false,
+   "cids": [
+    "c0025",
+    "c0118",
+    "c0597",
+    "c1557",
+    "c0903"
+   ]
+  },
+  {
+   "key": "A-40",
+   "title": "Give performance agents production profiles mapped to exact code revisions",
+   "idea": "Feed agents CPU profiles or function-level runtime data tied to the deployed revision so they map hot paths to code, rank opportunities by impact and produce measured savings.",
+   "contested": false,
+   "cids": [
+    "c0096",
+    "c0097",
+    "c0355"
+   ]
+  },
+  {
+   "key": "A-41",
+   "title": "Let the agent run closed-loop experiments against the real system",
+   "idea": "For reverse engineering and subtle bugs, have the agent brute-force hypotheses and validate each with experiments on the real device instead of reasoning from docs.",
+   "contested": false,
+   "cids": [
+    "c0626",
+    "c0627"
+   ]
+  },
+  {
+   "key": "A-42",
+   "title": "Automate the path from production signals and tickets to a fix PR",
+   "idea": "Ingest errors, alerts, feedback or meetings, triage and diagnose them, and let a sandboxed agent produce a tested PR, so human attention is spent only on review. Talks differ on how far to go: start narrow with human-reviewed diagnoses or automate ticket-to-deploy end to end.",
+   "contested": false,
+   "cids": [
+    "c0665",
+    "c0537",
+    "c1029",
+    "c0644",
+    "c1141",
+    "c1021",
+    "c0667"
+   ]
+  },
+  {
+   "key": "A-43",
+   "title": "Software factories: end-to-end agent pipelines with human checkpoints",
+   "idea": "Teams describe factories that embed planning, triage, implementation, review and verification with human checkpoints placed by risk, built on existing platform capabilities; one talk warns against a rigid factory pipeline and favors targeted optimization plus organizational context.",
+   "contested": true,
+   "cids": [
+    "c1449",
+    "c1695",
+    "c1338",
+    "c1123",
+    "c1124",
+    "c0738"
+   ]
+  },
+  {
+   "key": "A-44",
+   "title": "Run a fleet of parallel agents in isolated worktrees, with the human steering",
+   "idea": "Once runs exceed a few minutes, run many agents in parallel, one git worktree per task under an orchestrator, picking effort per task; the human steers and verifies instead of being the throughput bottleneck.",
+   "contested": false,
+   "cids": [
+    "c1030",
+    "c1334",
+    "c0383",
+    "c0699"
+   ]
+  },
+  {
+   "key": "A-45",
+   "title": "Delegate whole goals asynchronously and review outcomes",
+   "idea": "Use shifts from supervised implementation to delegating broad tasks (overnight or weekend runs) and reviewing the resulting PRs.",
+   "contested": false,
+   "cids": [
+    "c0229",
+    "c1533",
+    "c0584"
+   ]
+  },
+  {
+   "key": "A-46",
+   "title": "Autonomy ladder: from pair programming to persistent always-on agents",
+   "idea": "Agent use climbs stages (agent loop, harness with subagents, cloud and Slack, persistent 'claw' with heartbeat and memory; or stacked loops up to software factories); choose execution mode by how much oversight the task needs.",
+   "contested": false,
+   "cids": [
+    "c0322",
+    "c0323",
+    "c1664",
+    "c0212",
+    "c0275"
+   ]
+  },
+  {
+   "key": "A-47",
+   "title": "Agent sessions should be persistent, shared and remotely steerable",
+   "idea": "Make sessions reachable from phone, Slack and teammates, and hand off decisions and agent state with a runnable checkout, so idle agent time is not wasted and intent is not reconstructed later.",
+   "contested": false,
+   "cids": [
+    "c0502",
+    "c0609",
+    "c0536",
+    "c1339",
+    "c0548",
+    "c1321"
+   ]
+  },
+  {
+   "key": "A-48",
+   "title": "Give agents a persistent isolated sandbox computer",
+   "idea": "Agents need a sandbox that executes code, installs dependencies and keeps files across turns; across frameworks the abstraction reduces to create/run/destroy, and platforms should absorb sandbox infrastructure.",
+   "contested": false,
+   "cids": [
+    "c0105",
+    "c1568",
+    "c1898",
+    "c0811",
+    "c2023"
+   ]
+  },
+  {
+   "key": "A-49",
+   "title": "Let the model write and execute code instead of making discrete tool calls",
+   "idea": "Code composes: a persistent REPL or sandbox lets the agent hold state, loop and filter results, cutting round trips and tokens versus tool-calling loops; agents can even write their own tools or use a typed SDK for consequential edits.",
+   "contested": false,
+   "cids": [
+    "c0239",
+    "c0742",
+    "c1527",
+    "c1528",
+    "c0634",
+    "c1632",
+    "c0619"
+   ]
+  },
+  {
+   "key": "A-50",
+   "title": "Let agents explore a filesystem of docs and schemas instead of stuffing prompts",
+   "idea": "Expose schemas, docs and debugging interfaces as a navigable filesystem and let a single agent search it; reported to beat giant prompts and elaborate agent chains.",
+   "contested": false,
+   "cids": [
+    "c1414",
+    "c1416",
+    "c0491",
+    "c1765"
+   ]
+  },
+  {
+   "key": "A-51",
+   "title": "Code graphs and semantic search improve agent code navigation over grep",
+   "idea": "Semantic search and symbol-level code graphs improve accuracy and cut tool calls and tokens, mainly on large codebases; agents default to grep, so graph tools need familiar names and outputs to be adopted.",
+   "contested": false,
+   "cids": [
+    "c0059",
+    "c0136",
+    "c0588",
+    "c2021",
+    "c2022"
+   ]
+  },
+  {
+   "key": "A-52",
+   "title": "Use agents for comprehension before generation",
+   "idea": "Most valuable agent use is understanding unfamiliar or legacy code: catch-me-up summaries, queryable legacy code, domain mapping, read before planning or implementing.",
+   "contested": false,
+   "cids": [
+    "c0251",
+    "c0252",
+    "c1229",
+    "c1131"
+   ]
+  },
+  {
+   "key": "A-53",
+   "title": "How to represent pages and documents to agents: accessibility trees, Markdown or rendered views",
+   "idea": "Compact structured representations (accessibility snapshots, Markdown with action feedback) are argued cheaper and more reliable than screenshots; others report computer-use agents moving from accessibility trees to visual control, and spreadsheets needing a rendered view.",
+   "contested": true,
+   "cids": [
+    "c0141",
+    "c1958",
+    "c1679",
+    "c0743"
+   ]
+  },
+  {
+   "key": "A-54",
+   "title": "Browser agents: call structured APIs where possible vs operate the rendered UI",
+   "idea": "Intercept network calls, use WebMCP or CDP scripts and pick the cheapest access per stage; others argue most sites will never expose agent APIs, so agents must operate the rendered UI behind logins, mixing deterministic and natural-language actions.",
+   "contested": true,
+   "cids": [
+    "c0159",
+    "c0751",
+    "c0260",
+    "c1116",
+    "c1118",
+    "c0762",
+    "c1181",
+    "c1383"
+   ]
+  },
+  {
+   "key": "A-55",
+   "title": "Record successful agent runs as replayable code and fall back to the model",
+   "idea": "Use the model once to explore, then save a deterministic script, scraper or cached trajectory and replay it, falling back to the model only when the environment deviates; cuts cost and raises reliability.",
+   "contested": false,
+   "cids": [
+    "c1678",
+    "c1401",
+    "c0364",
+    "c0365",
+    "c0935"
+   ]
+  },
+  {
+   "key": "A-56",
+   "title": "Have agents author visuals and video as HTML/CSS/React rendered deterministically",
+   "idea": "Agents do graphics badly in human canvases or DSLs but well in HTML/CSS/JS and React (Remotion) that a browser renders, giving polished slides, docs and videos.",
+   "contested": false,
+   "cids": [
+    "c0465",
+    "c0466",
+    "c0467",
+    "c0192",
+    "c0263"
+   ]
+  },
+  {
+   "key": "A-57",
+   "title": "A standard protocol between clients and agent harnesses",
+   "idea": "ACP and app-server JSON-RPC protocols decouple UIs (editors, CLI, desktop) from harnesses and harnesses from inference, so many clients share one harness instead of bespoke 1-to-1 integrations.",
+   "contested": false,
+   "cids": [
+    "c0190",
+    "c1049",
+    "c1050",
+    "c0243",
+    "c1864",
+    "c0781"
+   ]
+  },
+  {
+   "key": "A-58",
+   "title": "Generate tool schemas and client bindings from code so specs cannot drift",
+   "idea": "Derive tool definitions from typed function signatures and ship version-pinned bindings with the harness, so interfaces never drift from implementations.",
+   "contested": false,
+   "cids": [
+    "c0920",
+    "c1867"
+   ]
+  },
+  {
+   "key": "A-59",
+   "title": "Return actionable errors so the agent can recover",
+   "idea": "Tool errors, refusals and config failures should be descriptive inputs telling the agent how to recover, not exceptions that abort the run.",
+   "contested": false,
+   "cids": [
+    "c0187",
+    "c0968",
+    "c1434",
+    "c2100"
+   ]
+  },
+  {
+   "key": "A-60",
+   "title": "Curate a small, self-documenting, workflow-shaped tool surface",
+   "idea": "Do not expose every endpoint or third-party MCP tool as-is: filter, wrap and inject fixed arguments, encode workflow structure in fewer tools, and make names and descriptions self-explanatory.",
+   "contested": false,
+   "cids": [
+    "c0140",
+    "c2076",
+    "c0969"
+   ]
+  },
+  {
+   "key": "A-61",
+   "title": "Design CLIs for agents: non-interactive, JSON, compact filterable output",
+   "idea": "Agents get stuck on interactive prompts, hallucinate parameters and pipe output through head/tail; agent-usable CLIs use JSON, consistent commands, discoverable help and compact output, and teams track what agents fail to find.",
+   "contested": false,
+   "cids": [
+    "c2089",
+    "c1804",
+    "c1805",
+    "c1137",
+    "c0686"
+   ]
+  },
+  {
+   "key": "A-62",
+   "title": "Choose between skills, MCP and CLIs by what the capability is",
+   "idea": "Skills carry procedure, MCP remote tools and data, CLIs local commands and large outputs; agent-accessible APIs/CLIs/MCP matter more than dashboards, ideally with local validation.",
+   "contested": false,
+   "cids": [
+    "c0037",
+    "c0432",
+    "c2090",
+    "c0086",
+    "c0572",
+    "c1168"
+   ]
+  },
+  {
+   "key": "A-63",
+   "title": "Skills should be small, composable and script-backed, not pure prose",
+   "idea": "A skill is a folder with metadata plus scripts loaded on demand; robust skills put deterministic steps in scripts and load context selectively, since prose-only skills work only sometimes.",
+   "contested": false,
+   "cids": [
+    "c0684",
+    "c0694",
+    "c1827"
+   ]
+  },
+  {
+   "key": "A-64",
+   "title": "Skills can replace product feature code, at a cost",
+   "idea": "Markdown skills plus slash commands replaced thousands of lines of feature code and are pitched as the new product features, but cost isolation, discoverability and consistency versus code-enforced features.",
+   "contested": true,
+   "cids": [
+    "c0610",
+    "c0611",
+    "c0688"
+   ]
+  },
+  {
+   "key": "A-65",
+   "title": "Package recurring team workflows as shared org-wide skills",
+   "idea": "Standardize recurring work (QA, design and deploy preferences, judgment, guardrails) as shared skills, hooks and AGENTS.md maintained like code; heavy skill users show higher throughput while adoption stays low.",
+   "contested": false,
+   "cids": [
+    "c0085",
+    "c0415",
+    "c1551",
+    "c0242",
+    "c1555",
+    "c1184",
+    "c0175",
+    "c0374"
+   ]
+  },
+  {
+   "key": "A-66",
+   "title": "Feed agents current docs and reference code instead of relying on stale weights",
+   "idea": "Models know fast-moving tools poorly; supply current docs at run time, small reference projects, upstream repos or published versioned skills, which measurably improves output.",
+   "contested": false,
+   "cids": [
+    "c0503",
+    "c0685",
+    "c0886",
+    "c0691",
+    "c1026"
+   ]
+  },
+  {
+   "key": "A-67",
+   "title": "Agents copy inaccessible patterns; an accessibility skill fixes generated UI",
+   "idea": "Agents reproduce existing accessibility issues, so fix the codebase and give agents an accessibility skill; reported runs were cheaper, faster and produced keyboard-usable semantics.",
+   "contested": false,
+   "cids": [
+    "c1169",
+    "c1930",
+    "c1170"
+   ]
+  },
+  {
+   "key": "A-68",
+   "title": "Agent task horizons grow fast, but long-horizon reliability still limits",
+   "idea": "Model generations extended task horizons from minutes to hours and enabled new uses (auto-research, big refactors, tool-unlocked capability), yet humans still beat agents on long tasks and duration reliability limits remain.",
+   "contested": false,
+   "cids": [
+    "c0236",
+    "c0134",
+    "c0128",
+    "c0332",
+    "c0113",
+    "c0028"
+   ]
+  },
+  {
+   "key": "A-69",
+   "title": "Choose models by replaying your own tasks and stay model-agnostic",
+   "idea": "Public benchmarks and vendor lock-in mislead; route tasks by type, replay historical tasks against candidate models, and keep harnesses portable across open-weight and vendor models.",
+   "contested": false,
+   "cids": [
+    "c1328",
+    "c1284",
+    "c0535",
+    "c0556"
+   ]
+  },
+  {
+   "key": "A-70",
+   "title": "Strong model plans and reviews; a cheap fast model implements",
+   "idea": "Pair a larger planning/review model with a faster cheaper execution model, steering actively instead of one-shot prompts.",
+   "contested": false,
+   "cids": [
+    "c1475",
+    "c0335"
+   ]
+  },
+  {
+   "key": "A-71",
+   "title": "Research agents recombine known methods; breakthroughs need hypotheses and human steering",
+   "idea": "Autonomous research loops plateau on code/hyperparameter tuning and beat records by combining existing methods; explicit hypothesis generation, decomposition, agent persistence and human-injected ideas drive real progress.",
+   "contested": false,
+   "cids": [
+    "c0125",
+    "c1455",
+    "c1456",
+    "c1174"
+   ]
+  }
+ ],
+ "singletons": [
+  "c0055",
+  "c0087",
+  "c0088",
+  "c0089",
+  "c0183",
+  "c0254",
+  "c0286",
+  "c0366",
+  "c0388",
+  "c0782",
+  "c0951",
+  "c1100",
+  "c1537",
+  "c1548",
+  "c1637",
+  "c1735",
+  "c1803",
+  "c1811",
+  "c1865",
+  "c1866",
+  "c0114",
+  "c0876",
+  "c0887",
+  "c1340"
+ ],
+ "noise": [
+  "c0603",
+  "c1397",
+  "c1868",
+  "c0416"
+ ]
+}
