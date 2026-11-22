@@ -20,14 +20,24 @@ them.
   browser `User-Agent`. The rerun's fetcher uses `WebFetch`, which cannot set one; if the API
   refuses it, the fetcher says so and the run uses the MCP tools below. The 2026 talk list
   carried `slug`, `title`, `url`, `event`, `durationMs`, `speakers`, `topics`, `summary` and
-  `slideText` per talk. The talk list dataset's name and the API's current shape were not checked when this file was written:
-  the first supervised rerun checks them and corrects this line.
+  `slideText` per talk. Checked on 2026-11-22 (#357): the talk list is the dataset `talks`.
+  `WebFetch` is not refused, but the `talks` response is over its 10 MB cap whatever
+  parameters are added (`limit`, `page`, `fields`, `event`, `format=csv`), so a rerun
+  cannot read it. `status` works and gives `counts.talks`, the corpus size, but no count per
+  event. `/api/data` and `/api/data/datasets` return 404.
+- **Topic slugs**: the topics page, `https://ai.engineer/topics`, lists every topic's slug.
+  The MCP has no list of topics; the fetcher reads this page only to count and list talks
+  with no event (`pipeline/fetch.md`, step 3).
 - **Talk records and citations**: the `ai-engineer` MCP server. `fetch` with `id` =
   `talk:<slug>` returns the talk; with `section: "transcript"` and `query` = a claim's `search`
   phrase it returns transcript passages, each with a `citation` in Markdown, a link with the
   timestamp. A citation is copied verbatim, never computed or edited.
 - `list_conferences`, `get_schedule` and `search` on the same server list conferences and
-  their talks.
+  their talks. `search(kind="talk")` needs a filter (event, topic, speaker or organization)
+  and pages 10 talks at a time. Its `event` filter matches part of the event name and never
+  matches a talk with no event, and conference records list no talks. `fetch` with `id` =
+  `topic:<slug>` returns every talk id of that topic (`talkIds`). That is how the fetch step
+  reaches talks with no event.
 
 ## A dropped talk
 
