@@ -7,16 +7,22 @@ event, so those talks are counted, not listed (`fetch.md`, step 3). The fetcher 
 ids it listed and two numbers it read, and this script does the counting:
 
 - `T`, the corpus size, and `E`, the talks whose event names a year: `N0 = T - E` have none.
+  `E` above `T` is refused.
 - `P`: published ids (`--known`) that are not in any list. A published talk with an event
   in scope is in a list, so these are the published talks with no event.
 - `N0 - P` talks with no event are not published yet, and the rerun does not check them:
-  no MCP call lists them (`data/sources.md`), and the script says so whenever there are
-  any. Below 0, some published talk is missing from the lists for another reason (a gap, a
-  renamed or dropped talk), and the count cannot say which: all `N0` are reported.
+  no bounded MCP call series lists them (`data/sources.md`), and the script says so
+  whenever there are any. Below 0, some published talk is missing from the lists for
+  another reason (an event out of scope, a gap, a renamed or dropped talk), and the count
+  cannot say which: all `N0` are reported, with that reason.
 
 A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
-own. `listing.json` stays outside the repo; this script prints counts only, never an id or
-an event name from it.
+own and named by its place (`lists[0]`). The gap check compares two numbers the fetcher
+wrote, so it catches a copying slip, not a wrong or injected listing.
+
+`listing.json` stays outside the repo. The script prints numbers, list places and fixed
+text only, never an id or other text read from either file: a file it cannot read is
+named with the error's type, not its message.
 """
 
 from __future__ import annotations
@@ -28,7 +34,15 @@ import sys
 from pathlib import Path
 
 TALK_ID = re.compile(r"talk:[a-z0-9]+(?:-[a-z0-9]+)*")
-NOT_REACHED = "not checked: no MCP call lists the talks with no event (data/sources.md)"
+NOT_REACHED = (
+    "not checked: no bounded MCP call series lists the talks with no event "
+    "(data/sources.md)"
+)
+BELOW_ZERO = (
+    "not checked: a published talk is missing from the lists for another reason "
+    "(an event out of scope, a gap, a renamed or dropped talk), so the count cannot "
+    "tell which talks are new"
+)
 
 
 class Refused(Exception):
@@ -50,12 +64,14 @@ def talk_ids(value, name: str) -> list[str]:
     return value
 
 
-def read_listing(path: Path) -> tuple[int, int, list[tuple[str, int, list[str]]]]:
+def read_listing(path: Path) -> tuple[int, int, list[tuple[int, list[str]]]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise Refused("not an object")
     t = whole(data.get("T"), "T")
     e = whole(data.get("E"), "E")
+    if e > t:
+        raise Refused("E is above T")
     lists = data.get("lists")
     if not isinstance(lists, list):
         raise Refused("lists is not a list")
@@ -64,7 +80,7 @@ def read_listing(path: Path) -> tuple[int, int, list[tuple[str, int, list[str]]]
         if not isinstance(item, dict) or not isinstance(item.get("s"), str):
             raise Refused(f"lists[{i}] has no event substring s")
         total = whole(item.get("total"), f"lists[{i}].total")
-        out.append((item["s"], total, talk_ids(item.get("ids"), f"lists[{i}].ids")))
+        out.append((total, talk_ids(item.get("ids"), f"lists[{i}].ids")))
     return t, e, out
 
 
@@ -73,24 +89,40 @@ def known_ids(path: Path) -> set[str]:
     return {json.loads(x)["id"] for x in lines if x.strip()}
 
 
+def read(path: Path, reader):
+    """Run reader on path; any failure becomes a Refused naming the file, not its text."""
+    try:
+        return reader(path)
+    except Refused as err:
+        raise Refused(f"{path.name}: {err}") from None
+    # JSONDecodeError, UnicodeDecodeError and an over-long int are ValueErrors; deep
+    # nesting is a RecursionError; a missing file is an OSError; a known line with no
+    # id is a KeyError or TypeError.
+    except (ValueError, RecursionError, OSError, KeyError, TypeError) as err:
+        raise Refused(f"{path.name}: unreadable ({type(err).__name__})") from None
+
+
 def count(listing: Path, known: Path) -> list[str]:
-    t, e, lists = read_listing(listing)
+    t, e, lists = read(listing, read_listing)
+    published_ids = read(known, known_ids)
     lines = []
     listed: set[str] = set()
-    for s, total, ids in lists:
+    for i, (total, ids) in enumerate(lists):
         listed.update(ids)
         if total != len(set(ids)):
-            lines.append(f"list gap: {s} total {total}, read {len(set(ids))}")
+            lines.append(f"list gap: lists[{i}] total {total}, read {len(set(ids))}")
     n0 = t - e
-    published = len(known_ids(known) - listed)
+    published = len(published_ids - listed)
     unchecked = n0 - published
     shown = f"{unchecked}" if unchecked >= 0 else f"{n0} (all: count below 0)"
     lines.append(
         f"no event {n0}, published {published}, not checked {shown}, "
         f"list gaps {len(lines)}"
     )
-    if unchecked != 0:
+    if unchecked > 0:
         lines.append(NOT_REACHED)
+    elif unchecked < 0:
+        lines.append(BELOW_ZERO)
     return lines
 
 
@@ -104,8 +136,8 @@ def main(argv: list[str]) -> int:
 
     try:
         lines = count(args.listing, args.known)
-    except (Refused, json.JSONDecodeError) as err:
-        print(f"{args.listing.name}: {err}")
+    except Refused as err:
+        print(err)
         return 1
     print("\n".join(lines))
     return 0

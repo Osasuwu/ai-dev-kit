@@ -129,6 +129,10 @@ stopped and why.
 - An agent's text reaches the public pull request only through the data files the scripts
   check (`check_data.py`); the description is written from the scripts' counts. A data file can still
   carry injected text in a field, which `check_data.py` does not judge: the human review does.
+- `no_event.py` counts from what the fetcher wrote. Its "list gap" check compares two
+  numbers the fetcher copied (a list's `total` and the ids it wrote), so it catches a copying
+  slip, not a wrong or injected listing; `T` and `E` are the fetcher's copy too. The script
+  prints numbers, list places and fixed text, never an id or other text from the file.
 - "The session does not read outside text" is an instruction to the session, not a limit.
 - Spawned as a general-purpose agent instead of `aie-fetcher` or `aie-worker`, a step gets every
   tool the session has.
