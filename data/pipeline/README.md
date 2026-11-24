@@ -38,8 +38,9 @@ expression for the event names in scope, for example `2026|2027`. It also matche
 that already has published talks (the 2026 events today, [`../README.md`](../README.md)):
 the count of talks with no event (`no_event.py`) assumes it: a published talk missing from
 the fetcher's lists for any other reason (its event is out of scope, the conference dropped or
-renamed it, a gap) lowers that count by one, and below 0 the script reports them all. Run from the repo root, on a new
-branch cut from `origin/main`.
+renamed it, a gap) lowers that count by one, and below 0 the script reports them all. An
+event name with no "20" in it counts as no event, which can only raise the count. Run from
+the repo root, on a new branch cut from `origin/main`.
 
 Every script runs as `python -I -B`: `-I` leaves out the user's site-packages (an
 agent-written `usercustomize.py`) and the `PYTHON*` variables, `-B` writes no bytecode into
