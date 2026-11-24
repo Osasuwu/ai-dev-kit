@@ -20,8 +20,8 @@ The local files you read are this one, `data/sources.md` and `data/talks.jsonl`;
    the event name, so keep the talks whose event matches `<events>`. For each `<s>`, note
    `pagination.total` and the number of talks you read. When they differ, or a result
    reports another `contentVersion`, the list has a gap: say so in your return. Record each talk's slug, title, URL, event name,
-   duration and speakers as the source gives them. The data API's talk list is too large for
-   `WebFetch` (`data/sources.md`); do not try another way in.
+   duration and speakers as the source gives them. This step does not use the data API
+   (`data/sources.md`), and you have no tool that opens a URL.
 3. **Count the talks with no event.** No tool lists them: the `event` filter never matches a
    talk whose event is empty, and `search` needs a filter. Count them instead.
    - `T` is the talk count in `coverage.loaded` of any `search(kind="talk", ...)` result.
