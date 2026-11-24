@@ -1,0 +1,115 @@
+"""Count the talks with no event that a rerun has not published (#360).
+
+Usage: python data/pipeline/no_event.py count <scratch>/listing.json --known data/talks.jsonl
+
+The fetch step lists talks through the MCP event filter, which never matches a talk with no
+event, so those talks are counted, not listed (`fetch.md`, step 3). The fetcher writes the
+ids it listed and two numbers it read, and this script does the counting:
+
+- `T`, the corpus size, and `E`, the talks whose event names a year: `N0 = T - E` have none.
+- `P`: published ids (`--known`) that are not in any list. A published talk with an event
+  in scope is in a list, so these are the published talks with no event.
+- `N0 - P` talks with no event are not published yet, and the rerun does not check them:
+  no MCP call lists them (`data/sources.md`), and the script says so whenever there are
+  any. Below 0, some published talk is missing from the lists for another reason (a gap, a
+  renamed or dropped talk), and the count cannot say which: all `N0` are reported.
+
+A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
+own. `listing.json` stays outside the repo; this script prints counts only, never an id or
+an event name from it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+TALK_ID = re.compile(r"talk:[a-z0-9]+(?:-[a-z0-9]+)*")
+NOT_REACHED = "not checked: no MCP call lists the talks with no event (data/sources.md)"
+
+
+class Refused(Exception):
+    pass
+
+
+def whole(value, name: str) -> int:
+    if type(value) is not int or value < 0:
+        raise Refused(f"{name} is not a whole number")
+    return value
+
+
+def talk_ids(value, name: str) -> list[str]:
+    if not isinstance(value, list):
+        raise Refused(f"{name} is not a list")
+    for i, x in enumerate(value):
+        if not isinstance(x, str) or not TALK_ID.fullmatch(x):
+            raise Refused(f"{name}[{i}] is not a talk id")
+    return value
+
+
+def read_listing(path: Path) -> tuple[int, int, list[tuple[str, int, list[str]]]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise Refused("not an object")
+    t = whole(data.get("T"), "T")
+    e = whole(data.get("E"), "E")
+    lists = data.get("lists")
+    if not isinstance(lists, list):
+        raise Refused("lists is not a list")
+    out = []
+    for i, item in enumerate(lists):
+        if not isinstance(item, dict) or not isinstance(item.get("s"), str):
+            raise Refused(f"lists[{i}] has no event substring s")
+        total = whole(item.get("total"), f"lists[{i}].total")
+        out.append((item["s"], total, talk_ids(item.get("ids"), f"lists[{i}].ids")))
+    return t, e, out
+
+
+def known_ids(path: Path) -> set[str]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return {json.loads(x)["id"] for x in lines if x.strip()}
+
+
+def count(listing: Path, known: Path) -> list[str]:
+    t, e, lists = read_listing(listing)
+    lines = []
+    listed: set[str] = set()
+    for s, total, ids in lists:
+        listed.update(ids)
+        if total != len(set(ids)):
+            lines.append(f"list gap: {s} total {total}, read {len(set(ids))}")
+    n0 = t - e
+    published = len(known_ids(known) - listed)
+    unchecked = n0 - published
+    shown = f"{unchecked}" if unchecked >= 0 else f"{n0} (all: count below 0)"
+    lines.append(
+        f"no event {n0}, published {published}, not checked {shown}, "
+        f"list gaps {len(lines)}"
+    )
+    if unchecked != 0:
+        lines.append(NOT_REACHED)
+    return lines
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    sub = ap.add_subparsers(dest="command", required=True)
+    c = sub.add_parser("count")
+    c.add_argument("listing", type=Path)
+    c.add_argument("--known", type=Path, required=True)
+    args = ap.parse_args(argv)
+
+    try:
+        lines = count(args.listing, args.known)
+    except (Refused, json.JSONDecodeError) as err:
+        print(f"{args.listing.name}: {err}")
+        return 1
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

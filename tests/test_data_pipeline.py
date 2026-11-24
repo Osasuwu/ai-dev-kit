@@ -237,9 +237,11 @@ def test_batches_picks_the_events_the_caller_names(tmp_path):
         talk_row("old", "AI Engineer Europe 2026"),
         talk_row("new", "AI Engineer Europe 2027"),
         talk_row("loose", ""),
+        # The fetch step writes a talk with no event as null or "" (#360).
+        talk_row("null", None),
     ]
     picked = run_batches(tmp_path, rows, "--event-pattern", "2027")
-    assert picked == ["talk:new", "talk:loose"]
+    assert picked == ["talk:new", "talk:loose", "talk:null"]
 
 
 def test_batches_requires_an_event_pattern(tmp_path, capsys):
@@ -259,6 +261,106 @@ def test_batches_skips_talks_already_published(tmp_path):
         tmp_path, rows, "--event-pattern", "2027", "--known", str(known)
     )
     assert picked == ["talk:fresh"]
+
+
+# --- no_event: the count of talks with no event is a script's, not the fetcher's -----
+
+
+def run_no_event(tmp_path, listing, known_ids, capsys):
+    scratch = tmp_path / "scratch"
+    scratch.mkdir(exist_ok=True)
+    (scratch / "listing.json").write_text(json.dumps(listing), encoding="utf-8")
+    known = tmp_path / "known.jsonl"
+    write_jsonl(known, [{**TALK, "id": i} for i in known_ids])
+    code = load("no_event").main(
+        ["count", str(scratch / "listing.json"), "--known", str(known)]
+    )
+    return code, capsys.readouterr().out.strip().splitlines()
+
+
+def listing(t, e, *lists):
+    return {
+        "T": t,
+        "E": e,
+        "lists": [{"s": s, "total": n, "ids": ids} for s, n, ids in lists],
+    }
+
+
+# The reason the script gives when talks with no event are left unchecked (#360 AC 2).
+NOT_REACHED = "not checked: no MCP call lists the talks with no event (data/sources.md)"
+
+
+def test_no_event_counts_published_talks_missing_from_the_list(tmp_path, capsys):
+    # 10 talks, 7 with a year: 3 with no event. Published c and z are not in the list,
+    # so they are the published talks with no event; 1 talk with no event is unpublished.
+    data = listing(10, 7, ("2026", 3, ["talk:a", "talk:b", "talk:x"]))
+    code, out = run_no_event(
+        tmp_path, data, ["talk:a", "talk:b", "talk:c", "talk:z"], capsys
+    )
+    assert code == 0
+    assert out == ["no event 3, published 2, not checked 1, list gaps 0", NOT_REACHED]
+
+
+def test_no_event_gives_no_reason_when_every_talk_with_no_event_is_published(
+    tmp_path, capsys
+):
+    data = listing(10, 8, ("2026", 3, ["talk:a", "talk:b", "talk:x"]))
+    code, out = run_no_event(
+        tmp_path, data, ["talk:a", "talk:b", "talk:c", "talk:z"], capsys
+    )
+    assert code == 0
+    assert out == ["no event 2, published 2, not checked 0, list gaps 0"]
+
+
+def test_no_event_reports_all_as_not_checked_when_the_count_goes_below_zero(
+    tmp_path, capsys
+):
+    # 1 talk with no event, but 2 published talks are missing from the list: one of them
+    # is missing for another reason, so the count cannot say which talk is unpublished.
+    data = listing(5, 4, ("2026", 1, ["talk:a"]))
+    code, out = run_no_event(tmp_path, data, ["talk:a", "talk:c", "talk:z"], capsys)
+    assert code == 0
+    assert out == [
+        "no event 1, published 2, not checked 1 (all: count below 0), list gaps 0",
+        NOT_REACHED,
+    ]
+
+
+def test_no_event_names_a_list_whose_total_differs_from_the_ids_read(tmp_path, capsys):
+    # 2027 holds a duplicate: 3 ids written, 2 distinct, so one talk is missing.
+    data = listing(
+        10,
+        7,
+        ("2026", 4, ["talk:a", "talk:b"]),
+        ("2027", 3, ["talk:x", "talk:y", "talk:x"]),
+        ("2028", 1, ["talk:w"]),
+    )
+    code, out = run_no_event(tmp_path, data, ["talk:a"], capsys)
+    assert code == 0
+    assert out == [
+        "list gap: 2026 total 4, read 2",
+        "list gap: 2027 total 3, read 2",
+        "no event 3, published 0, not checked 3, list gaps 2",
+        NOT_REACHED,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("bad", "message"),
+    [
+        ({"E": 7, "lists": []}, "listing.json: T is not a whole number"),
+        ({"T": 7, "E": "5", "lists": []}, "listing.json: E is not a whole number"),
+        ({"T": 7, "E": 5, "lists": {}}, "listing.json: lists is not a list"),
+        (
+            {"T": 7, "E": 5, "lists": [{"s": "2026", "total": 1, "ids": ["a b"]}]},
+            "listing.json: lists[0].ids[0] is not a talk id",
+        ),
+    ],
+)
+def test_no_event_refuses_a_listing_it_cannot_count(tmp_path, capsys, bad, message):
+    code, out = run_no_event(tmp_path, bad, [], capsys)
+    assert code == 1
+    assert out == [message]
 
 
 # --- merge_claims: claim ids survive a rerun ------------------------------------------
