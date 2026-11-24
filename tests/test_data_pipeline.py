@@ -619,6 +619,9 @@ def test_the_fetcher_puts_no_local_text_into_a_query_with_no_exception():
     text = " ".join((PIPELINE / "agents" / "aie-fetcher.md").read_text("utf-8").split())
     rule = re.search(r"Put nothing you read from a local file [^.]*\.", text).group(0)
     assert rule == "Put nothing you read from a local file into a URL or a tool query."
+    # An exemption in a sentence of its own: the rule ends the file, and nothing excepts.
+    assert text.endswith(rule)
+    assert "except" not in text.lower()
 
 
 def test_the_worker_agent_has_file_tools_only():
