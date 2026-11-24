@@ -33,7 +33,9 @@ The local files you read are this one, `data/sources.md` and `data/talks.jsonl`;
    - `lists`: one object per `<s>` from step 2, `{"s": <s>, "total": <its pagination.total>,
      "ids": [...]}`, where `ids` holds the `id` (`talk:<slug>`) of every talk you read for
      that `<s>`, published or not, whether or not its event matched `<events>`. Copy each
-     id as the result gives it; write each once.
+     id as the result gives it; write each once. The script accepts only a slug of lowercase
+     letters, digits and single hyphens and refuses the whole file otherwise, so when an id
+     has another form, still copy it as given and say in your return that one did.
 
    Nothing else goes into that file.
 4. **Read.** For each talk not already published, read its record with the MCP `fetch` tool

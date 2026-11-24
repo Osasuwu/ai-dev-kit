@@ -17,7 +17,9 @@ ids it listed and two numbers it read, and this script does the counting:
   cannot say which: all `N0` are reported, with that reason (none when `N0` is 0).
 
 Each id must be `talk:` and a slug of lowercase letters, digits and single hyphens, the form
-every published id has; any other id refuses the whole listing. A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
+every published id has (`fetch.md`, step 3); any other id refuses the whole listing.
+
+A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
 own and named by its place (`lists[0]`). The gap check compares two numbers the fetcher
 wrote, so it catches a copying slip, not a wrong or injected listing.
 
