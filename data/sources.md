@@ -22,8 +22,8 @@ them.
   2026-11-22 (#357): the talk list is most likely the dataset `talks`, by its name and size;
   its response was never read. `WebFetch` is not refused, but the `talks` response is over
   its 10 MB cap with each parameter tried (`limit`, `page`, `fields`, `event`,
-  `format=csv`), so the rerun's fetcher does not use the data API; it uses the MCP tools
-  below. `status` works and gives `counts.talks`, the corpus size, but no count per
+  `format=csv`), so the rerun's fetcher does not use the data API and has no `WebFetch`;
+  it uses the MCP `search` and `fetch` below. `status` works and gives `counts.talks`, the corpus size, but no count per
   event. `/api/data` and `/api/data/datasets` return 404.
 - **Talk records and citations**: the `ai-engineer` MCP server. `fetch` with `id` =
   `talk:<slug>` returns the talk; with `section: "transcript"` and `query` = a claim's `search`

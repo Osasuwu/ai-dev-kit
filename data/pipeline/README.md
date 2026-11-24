@@ -10,8 +10,8 @@ A run reads text from outside pages, and the session that starts it holds the ma
 credentials. The two are kept apart:
 
 - **Steps that read outside text run in subagents with no shell and no GitHub tool.**
-  [`agents/aie-fetcher.md`](agents/aie-fetcher.md) fetches; it has file tools, `WebFetch` and
-  the conference's MCP tools. [`agents/aie-worker.md`](agents/aie-worker.md) extracts,
+  [`agents/aie-fetcher.md`](agents/aie-fetcher.md) fetches; it has `Read`, `Write` and
+  the conference's MCP `search` and `fetch`, and no tool that opens a URL. [`agents/aie-worker.md`](agents/aie-worker.md) extracts,
   clusters and matches; it has file tools only. Their `tools:` lists are what the harness
   enforces, so the definitions must be installed (Setup), not pasted into a prompt.
 - **The session itself (the credentialed step) does not read that text.** It runs the
@@ -110,10 +110,10 @@ the step where it stopped and why.
   that can write there runs code in every script step, `snapshot.py` included; only a
   site-packages folder the agents cannot write to closes this.
 - An agent's `Read` is not limited to a path. The fetcher is told to read only its step
-  file, `data/sources.md` and `data/talks.jsonl`, and has no `Glob` to search with, but an
-  injected page can still make
-  it read a file whose path it already knows (a token file, an SSH key) and send it out in a
-  `WebFetch` URL or an MCP query. Removing `Read` from the fetcher closes this; it then needs
+  file, `data/sources.md` and `data/talks.jsonl`, and has no `Glob` to search with and no
+  `WebFetch`, but an injected talk record can still make
+  it read a file whose path it already knows (a token file, an SSH key) and send it out in an
+  MCP `search` or `fetch` query. Removing `Read` from the fetcher closes this; it then needs
   the published talk ids from its task message instead. The worker has no network, but it
   writes the data files the pull request publishes: a secret it read and wrote into a field
   is stopped only by the leak gate and gitleaks, which catch known patterns.

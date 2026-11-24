@@ -603,17 +603,25 @@ def agent_tools(name):
     return [t.strip() for t in line.removeprefix("tools:").split(",")]
 
 
-def test_the_fetcher_agent_has_network_read_and_file_tools_only():
+def test_the_fetcher_agent_has_only_the_tools_its_fetch_step_uses():
     # No Glob: an injected page cannot have it search the disk for files to send out.
+    # No WebFetch: fetch.md lists and reads talks through the MCP search and fetch only,
+    # and a URL of the fetcher's own choosing is its widest way to send a file out.
     assert agent_tools("aie-fetcher") == [
         "Read",
         "Write",
-        "WebFetch",
-        "mcp__ai-engineer__list_conferences",
-        "mcp__ai-engineer__get_schedule",
         "mcp__ai-engineer__search",
         "mcp__ai-engineer__fetch",
     ]
+
+
+def test_the_fetcher_puts_no_local_text_into_a_query_with_no_exception():
+    text = " ".join((PIPELINE / "agents" / "aie-fetcher.md").read_text("utf-8").split())
+    rule = re.search(r"Put nothing you read from a local file [^.]*\.", text).group(0)
+    assert rule == "Put nothing you read from a local file into a URL or a tool query."
+    # An exemption in a sentence of its own: the rule ends the file, and nothing excepts.
+    assert text.endswith(rule)
+    assert "except" not in text.lower()
 
 
 def test_the_worker_agent_has_file_tools_only():
