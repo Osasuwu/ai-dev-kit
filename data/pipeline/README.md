@@ -72,7 +72,7 @@ the run's note. Answering a permission prompt with "don't ask again" during a ru
 the run again with a new snapshot.
 
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
-   [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
+   [`fetch.md`](fetch.md) and writes `<scratch>/talks.json` and `<scratch>/listing.json`.
 2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
    Talks already published are skipped. Then
    `python -I -B data/pipeline/no_event.py count <scratch>/listing.json --known data/talks.jsonl`.
@@ -102,8 +102,9 @@ the run again with a new snapshot.
 
 A run ends with a draft pull request and a one-line note: talks picked, any gap in the
 fetcher's list (its own and `no_event.py`'s), talks with no event not checked and why
-(`no_event.py`'s line; `T` and `E` in it are the fetcher's copy of two MCP numbers, which no
-script can re-read), claims added, new clusters, and the pull request URL, or the step where it
+(`no_event.py`'s line; its "no event" figure is `T − E`, the fetcher's copy of two MCP
+numbers, which no script can re-read; the fetcher returns them too, for the maintainer to
+compare), claims added, new clusters, and the pull request URL, or the step where it
 stopped and why.
 
 ## What this split does not stop

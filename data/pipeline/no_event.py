@@ -14,9 +14,10 @@ ids it listed and two numbers it read, and this script does the counting:
   no bounded MCP call series lists them (`data/sources.md`), and the script says so
   whenever there are any. Below 0, some published talk is missing from the lists for
   another reason (an event out of scope, a gap, a renamed or dropped talk), and the count
-  cannot say which: all `N0` are reported, with that reason.
+  cannot say which: all `N0` are reported, with that reason (none when `N0` is 0).
 
-A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
+Each id must be `talk:` and a slug of lowercase letters, digits and single hyphens, the form
+every published id has; any other id refuses the whole listing. A list whose `total` differs from the distinct ids read is a gap, printed on a line of its
 own and named by its place (`lists[0]`). The gap check compares two numbers the fetcher
 wrote, so it catches a copying slip, not a wrong or injected listing.
 
@@ -114,15 +115,17 @@ def count(listing: Path, known: Path) -> list[str]:
     n0 = t - e
     published = len(published_ids - listed)
     unchecked = n0 - published
-    shown = f"{unchecked}" if unchecked >= 0 else f"{n0} (all: count below 0)"
+    # Below 0 all N0 are reported; with N0 at 0 there is no talk to leave unchecked.
+    below = unchecked < 0 and n0 > 0
+    shown = f"{n0} (all: count below 0)" if below else f"{max(unchecked, 0)}"
     lines.append(
         f"no event {n0}, published {published}, not checked {shown}, "
         f"list gaps {len(lines)}"
     )
-    if unchecked > 0:
-        lines.append(NOT_REACHED)
-    elif unchecked < 0:
+    if below:
         lines.append(BELOW_ZERO)
+    elif unchecked > 0:
+        lines.append(NOT_REACHED)
     return lines
 
 

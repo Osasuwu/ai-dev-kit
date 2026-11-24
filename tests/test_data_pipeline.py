@@ -339,6 +339,17 @@ def test_no_event_reports_all_as_not_checked_when_the_count_goes_below_zero(
     ]
 
 
+def test_no_event_reports_nothing_unchecked_when_no_talk_lacks_an_event(
+    tmp_path, capsys
+):
+    # Every talk has an event, and a published talk is missing from the list: the count
+    # goes below 0, but there is no talk with no event to leave unchecked.
+    data = listing(5, 5, ("2026", 1, ["talk:a"]))
+    code, out = run_no_event(tmp_path, data, ["talk:a", "talk:c"], capsys)
+    assert code == 0
+    assert out == ["no event 0, published 1, not checked 0, list gaps 0"]
+
+
 def test_no_event_names_a_list_whose_total_differs_from_the_ids_read(tmp_path, capsys):
     # The second list holds a duplicate: 3 ids written, 2 distinct, so one talk is missing.
     # A list is named by its place, not by its fetcher-written s, which could carry
@@ -371,6 +382,7 @@ def test_no_event_names_a_list_whose_total_differs_from_the_ids_read(tmp_path, c
             "listing.json: lists[0].ids[0] is not a talk id",
         ),
         ({"T": -1, "E": 0, "lists": []}, "listing.json: T is not a whole number"),
+        ({"T": 7, "E": True, "lists": []}, "listing.json: E is not a whole number"),
         ({"T": 3, "E": 9, "lists": []}, "listing.json: E is above T"),
         ([], "listing.json: not an object"),
         (
@@ -387,6 +399,7 @@ def test_no_event_names_a_list_whose_total_differs_from_the_ids_read(tmp_path, c
         "lists-object",
         "bad-id",
         "negative",
+        "E-bool",
         "E-above-T",
         "not-object",
         "no-s",
