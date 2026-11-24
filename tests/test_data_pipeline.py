@@ -1046,3 +1046,16 @@ def test_the_fetcher_may_read_every_local_file_its_steps_name():
         )
     )
     assert named <= allowed_reads()
+
+
+def test_the_fetch_step_writes_the_listing_the_count_script_reads():
+    # Two artifacts that must agree (#360): the keys fetch.md has the fetcher write are the
+    # keys no_event.py reads (T, E, lists, and s, total, ids per list), and the run calls it.
+    step3 = step_text("fetch.md").split("\n3. **")[1].split("\n4. **")[0]
+    assert "`<scratch>/listing.json`" in step3
+    assert re.findall(r"^ +- `(\w+)`:", step3, re.M) == ["T", "E", "lists"]
+    assert re.search(r'\{"s": <s>, "total": <[^>]+>,\s*"ids": \[', step3)
+    assert (
+        "`python -I -B data/pipeline/no_event.py count <scratch>/listing.json "
+        "--known data/talks.jsonl`"
+    ) in step_text("README.md")

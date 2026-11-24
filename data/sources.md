@@ -33,13 +33,25 @@ them.
   their talks. `search(kind="talk")` needs a filter (event, topic, speaker or organization)
   and returns at most 10 talks per call (its `limit` maximum), with `pagination.total`. Its
   `event` filter matches part of the event name and never matches a talk with no event, and
-  conference records list no talks, so the fetch step counts the talks with no event rather
-  than listing them (`pipeline/fetch.md`, step 3).
-- **Talks with no event, for a later listing** (#360; the rerun's fetcher does not use
-  this route and does not open the page below): the topic
-  filter and the topic records reach them. `fetch` with `id` = `topic:<slug>` returns the
-  topic's talk ids (`talkIds`; on the one topic compared, the same 25 the topic filter gave).
-  The MCP has no list of topics; the page `https://ai.engineer/topics` lists the slugs.
+  conference records list no talks, so the rerun counts the talks with no event rather
+  than listing them (`pipeline/fetch.md`, step 3; the count is `pipeline/no_event.py`'s).
+  A talk with no event has `"event": null` in search results and in its record.
+- **Talks with no event: why the rerun does not list them** (#360; the rerun's fetcher does
+  not use this route and does not open the page below). The topic filter and the topic
+  records reach them, but no bounded call series lists them all. Checked on 2026-11-24:
+  - `fetch` with `id` = `topic:<slug>` returns the topic's complete `talkIds`, unpaginated,
+    with no event per id (on 3 topics, the same count as the topic filter's total: 8, 49
+    and 532).
+  - The topic filter's results carry each talk's `event`, 10 per call, so one topic of 532
+    talks is 53 calls; a talk sits in several topics.
+  - No MCP call lists every topic: `search(kind="topic")` needs a query, then reports 87
+    topics with no pagination; keyword queries found 85 of them. The page
+    `https://ai.engineer/topics` lists the slugs.
+  - A talk record's `topics` are titles, not slugs. The `youtube-` slug prefix does not mark
+    a talk with no event.
+
+  A listing becomes possible if the MCP gains a topic list or a filter for talks with no
+  event.
 
 ## A dropped talk
 

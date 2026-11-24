@@ -1,7 +1,7 @@
 # The data rerun
 
 How `data/` is regenerated when new conference talks come out. The steps are agent-run
-instruction files plus six small scripts; a run is an agent session that follows this file.
+instruction files plus seven small scripts; a run is an agent session that follows this file.
 Where the data comes from and how to refetch it: [`../sources.md`](../sources.md).
 
 ## The split
@@ -36,7 +36,9 @@ credentials. The two are kept apart:
 Everything fetched stays there; nothing fetched is committed. `<events>` is a regular
 expression for the event names in scope, for example `2026|2027`. It also matches every event
 that already has published talks (the 2026 events today, [`../README.md`](../README.md)):
-the fetcher's count of talks with no event assumes it. Run from the repo root, on a new
+the count of talks with no event (`no_event.py`) assumes it: a published talk missing from
+the fetcher's lists for any other reason (its event is out of scope, the conference dropped or
+renamed it, a gap) lowers that count by one, and below 0 the script reports them all. Run from the repo root, on a new
 branch cut from `origin/main`.
 
 Every script runs as `python -I -B`: `-I` leaves out the user's site-packages (an
@@ -71,9 +73,14 @@ the run again with a new snapshot.
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
    [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
 2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
-   Talks already published are skipped. "picked 0" ends the run here with a note: nothing new
-   found, and the fetcher's number of talks with no event not checked. When the fetcher
-   reported a gap in its list, the note says "list incomplete" and names the gap instead of
+   Talks already published are skipped. Then
+   `python -I -B data/pipeline/no_event.py count <scratch>/listing.json --known data/talks.jsonl`.
+   It counts the talks with no event this run does not check, from the ids the fetcher listed
+   and the published ids, and prints why they are not checked; a "list gap" line names a list
+   whose total differs from the ids written. A non-zero exit (a listing it cannot count, named
+   in its output) stops the run. "picked 0" ends the run here with a note: nothing new found,
+   and the script's "not checked" figure and reason. When the script printed a "list gap" line
+   or the fetcher reported a gap, the note says "list incomplete" and names the gap instead of
    "nothing new found".
 3. **Extract.** One `aie-worker` per `<scratch>/batches/batch-NN.json`, in parallel, each
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
@@ -93,9 +100,10 @@ the run again with a new snapshot.
 8. **Commit.** Follow [`commit.md`](commit.md).
 
 A run ends with a draft pull request and a one-line note: talks picked, any gap in the
-fetcher's list, talks with no event not checked (the fetcher's own count, which no script
-checks yet: #360), claims added, new clusters, and the pull request URL, or
-the step where it stopped and why.
+fetcher's list (its own and `no_event.py`'s), talks with no event not checked and why
+(`no_event.py`'s line; `T` and `E` in it are the fetcher's copy of two MCP numbers, which no
+script can re-read), claims added, new clusters, and the pull request URL, or the step where it
+stopped and why.
 
 ## What this split does not stop
 
