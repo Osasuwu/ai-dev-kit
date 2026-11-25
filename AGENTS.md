@@ -15,7 +15,7 @@ hooks (`.agents/hooks/`), scripts (`scripts/`), tests (`tests/`), workflows (`.g
 ## Gates a PR must pass
 
 Required by branch protection on `main` (admins included): `structure-gate`, `gitleaks`,
-`tests`, `ruff`. A required check you cannot make green is a stop, not a bypass. Repo
+`tests`, `ruff`, `link-check`. A required check you cannot make green is a stop, not a bypass. Repo
 auto-merge is off: every merge is a human's manual act.
 
 | Check | Workflow | Looks at |
@@ -24,7 +24,7 @@ auto-merge is off: every merge is a human's manual act.
 | `structure-gate` | `structure-gate.yml` | class docs, the incident dataset and the practice cards (`cards/`, format in `cards/README.md`), per `tests/structure_gate.py`; the log lists the card files checked |
 | `gitleaks` | `gitleaks.yml` | secrets (`.gitleaks.toml`) and personal literals in the working tree |
 | `ruff` | `lint.yml` | `ruff check .` and `ruff format --check .` over every Python file, on every PR and push to `main`; the version is pinned in `.github/ruff-requirements.txt` |
-| `link-check` (not required) | `link-check.yml` | links in changed `.md` files under `.github/hold-paths.json`, via `scripts/check_links.py`: alive, dead or not verified; fails only on dead; never judges the page's content |
+| `link-check` | `link-check.yml` | links in changed `.md` files under `.github/hold-paths.json`, via `scripts/check_links.py`: alive, dead or not verified; fails only on dead; never judges the page's content |
 No gate reads the PR body; the template is for the human reader. The path definition the
 structure gate and link check share is `.github/hold-paths.json`; do not restate it elsewhere.
 

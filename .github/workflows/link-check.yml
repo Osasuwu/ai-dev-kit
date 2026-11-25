@@ -5,7 +5,8 @@ name: Link check
 # (.github/hold-paths.json) and reports every link in them as alive, dead or not verified. It
 # fails on dead only; a link it could not judge (a login, a bot check, a rate limit) is not
 # verified and does not fail the job. It checks that a link resolves, never what the page says.
-# Optional: not a required check on main. No schedule: the weekly quote re-check stays the only
+# Required on main since 2026-11-25 (#340 AC7). It runs on every PR, so a PR with no changed
+# markdown still reports it. No schedule: the weekly quote re-check stays the only
 # cron.
 
 on:
