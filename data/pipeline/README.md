@@ -1,7 +1,7 @@
 # The data rerun
 
 How `data/` is regenerated when new conference talks come out. The steps are agent-run
-instruction files plus six small scripts; a run is an agent session that follows this file.
+instruction files plus seven small scripts; a run is an agent session that follows this file.
 Where the data comes from and how to refetch it: [`../sources.md`](../sources.md).
 
 ## The split
@@ -36,8 +36,11 @@ credentials. The two are kept apart:
 Everything fetched stays there; nothing fetched is committed. `<events>` is a regular
 expression for the event names in scope, for example `2026|2027`. It also matches every event
 that already has published talks (the 2026 events today, [`../README.md`](../README.md)):
-the fetcher's count of talks with no event assumes it. Run from the repo root, on a new
-branch cut from `origin/main`.
+the count of talks with no event (`no_event.py`) assumes it: a published talk missing from
+the fetcher's lists for any other reason (its event is out of scope, the conference dropped or
+renamed it, a gap) lowers that count by one, and below 0 the script reports them all. An
+event name with no "20" in it counts as no event, which can only raise the count. Run from
+the repo root, on a new branch cut from `origin/main`.
 
 Every script runs as `python -I -B`: `-I` leaves out the user's site-packages (an
 agent-written `usercustomize.py`) and the `PYTHON*` variables, `-B` writes no bytecode into
@@ -69,11 +72,16 @@ the run's note. Answering a permission prompt with "don't ask again" during a ru
 the run again with a new snapshot.
 
 1. **Fetch.** Spawn `aie-fetcher` with `<scratch>` and `<events>`; it follows
-   [`fetch.md`](fetch.md) and writes `<scratch>/talks.json`.
+   [`fetch.md`](fetch.md) and writes `<scratch>/talks.json` and `<scratch>/listing.json`.
 2. **Batch.** `python -I -B data/pipeline/batches.py <scratch>/talks.json <scratch>/batches 50 --event-pattern "<events>" --known data/talks.jsonl`.
-   Talks already published are skipped. "picked 0" ends the run here with a note: nothing new
-   found, and the fetcher's number of talks with no event not checked. When the fetcher
-   reported a gap in its list, the note says "list incomplete" and names the gap instead of
+   Talks already published are skipped. Then
+   `python -I -B data/pipeline/no_event.py count <scratch>/listing.json --known data/talks.jsonl`.
+   It counts the talks with no event this run does not check, from the ids the fetcher listed
+   and the published ids, and prints why they are not checked; a "list gap" line names a list
+   whose total differs from the ids written. A non-zero exit (a listing it cannot count, named
+   in its output) stops the run. "picked 0" ends the run here with a note: nothing new found,
+   and the script's "not checked" figure and reason. When the script printed a "list gap" line
+   or the fetcher reported a gap, the note says "list incomplete" and names the gap instead of
    "nothing new found".
 3. **Extract.** One `aie-worker` per `<scratch>/batches/batch-NN.json`, in parallel, each
    following [`extract.md`](extract.md) and writing `<scratch>/claims/batch-NN.jsonl`.
@@ -93,9 +101,11 @@ the run again with a new snapshot.
 8. **Commit.** Follow [`commit.md`](commit.md).
 
 A run ends with a draft pull request and a one-line note: talks picked, any gap in the
-fetcher's list, talks with no event not checked (the fetcher's own count, which no script
-checks yet: #360), claims added, new clusters, and the pull request URL, or
-the step where it stopped and why.
+fetcher's list (its own and `no_event.py`'s), talks with no event not checked and why
+(`no_event.py`'s line; its "no event" figure is `T − E`, the fetcher's copy of two MCP
+numbers, which no script can re-read; the fetcher returns them too, for the maintainer to
+compare), claims added, new clusters, and the pull request URL, or the step where it
+stopped and why.
 
 ## What this split does not stop
 
@@ -120,6 +130,10 @@ the step where it stopped and why.
 - An agent's text reaches the public pull request only through the data files the scripts
   check (`check_data.py`); the description is written from the scripts' counts. A data file can still
   carry injected text in a field, which `check_data.py` does not judge: the human review does.
+- `no_event.py` counts from what the fetcher wrote. Its "list gap" check compares two
+  numbers the fetcher copied (a list's `total` and the ids it wrote), so it catches a copying
+  slip, not a wrong or injected listing; `T` and `E` are the fetcher's copy too. The script
+  prints numbers, list places and fixed text, never an id or other text from the file.
 - "The session does not read outside text" is an instruction to the session, not a limit.
 - Spawned as a general-purpose agent instead of `aie-fetcher` or `aie-worker`, a step gets every
   tool the session has.
