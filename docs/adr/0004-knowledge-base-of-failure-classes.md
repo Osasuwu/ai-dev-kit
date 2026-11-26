@@ -9,6 +9,8 @@ Amended on 2026-10-07: the second calibration doc is in *Amendment: after the se
 doc*, and the contract freeze in *Amendment: after the third calibration doc*.
 Amended on 2026-11-04: the reviewer's measurement and the end of ADR-0002's backstop are in
 *Amendment: the reviewer's build*.
+Amended on 2026-11-25: decision 19's link check is a required check on `main`, so a dead link
+in a changed card blocks its merge (#340, acceptance criterion 7).
 Tracking: milestone "Knowledge base — first release". Supersedes ADR-0003 and ADR-0001.
 Amends ADR-0002.
 
@@ -311,7 +313,8 @@ sampling critic. Each answer below names the decision it changes.
     listed separately as "candidates, not established". A candidate folded into another class
     stays named in the host doc's text, so a search by its name still finds it.
 
-19. **Link checking.** After the pilot, an optional check on pull requests looks at the links
+19. **Link checking.** After the pilot, a check on pull requests (optional at first, required on
+    `main` since 2026-11-25) looks at the links
     in changed files. It reports each link as alive, dead or not verified. It never reports
     that a fact is correct. No scheduled run is added.
 

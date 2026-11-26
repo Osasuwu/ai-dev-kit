@@ -1,4 +1,4 @@
-"""Link check — an optional PR check (#264, ADR-0004 decision 19).
+"""Link check — a required PR check on main (#264, ADR-0004 decision 19, amended 2026-11-25).
 
 Takes the files a PR changed, keeps the markdown files under the shared path definition
 (``.github/hold-paths.json``, ADR-0004 decision 4), and reports every link in them with one state:
