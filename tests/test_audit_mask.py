@@ -25,19 +25,59 @@ PROMPT = ROOT / "prompts" / "audit.md"
 SEEDS = ROOT / "stand" / "seed"
 CANARY = re.compile(r"CANARY-[A-Z0-9-]+")
 
-# Claude Code settings.json and .mcp.json shapes, pretty-printed the way the tools write them.
+# Claude Code settings.json and .mcp.json shapes: pretty-printed the way the tools write them,
+# plus hand-written layouts (a value on the line after its key, an object on one line).
 HARD_JSON = """{
   "permissions": {
     "allow": [
       "Bash(npm test)",
       "Bash(gh auth status)",
+      "mcp__github__create_pull_request",
+      "Bash(./run_all_integration_tests)",
+      ["VALUE-INALLOW"],
       "Bash(deploy --token VALUELONGTOKEN0123456789abcdef)"
     ],
-    "deny": ["Read(./.env)", "Read(./secrets/**)"]
+    "deny": ["Read(./.env)", "Read(./secrets/**)"],
+    "ask": ["Bash(git push:*)",
+      "Bash(rm:*)"],
+    "defaultMode": "acceptEdits"
+  },
+  "mcpServers": {
+    "allman": {
+      "args":
+      [
+        "--token",
+        "VALUE-ALLMAN"
+      ]
+    },
+    "nextline": {
+      "command": "npx",
+      "args":
+      ["-y", "srv", "--api-key", "VALUE-NEXTLINE"]
+    },
+    "inline": { "type": "stdio", "command": "npx", "args": ["--db", "VALUE-INLARG"], "env": {"DB_PASS": "VALUE-INLENV"} },
+    "pairs": {
+      "type": "stdio", "command": "npx", "args": ["--db", "VALUE-PAIRS"]
+    },
+    "db": {
+      "options": {
+        "MODEL": "VALUE-OPTMODEL"
+      },
+      "command": "npx",
+      "args": [
+        "-y",
+        "--key",
+        "VALUE-ARGLINE"
+      ],
+      "headers": { "Authorization": "Bearer VALUE-HEADER" },
+      "url": "https://mcp.example.com/sse?k=VALUE-URLQUERY"
+    }
   },
   "env": {
     "BASE_URL": "${BASE_URL:-https://api.example.com}",
     "GITHUB_PAT": "VALUE-PAT",
+    "MODEL": "VALUE-ENVMODEL",
+    "command": "VALUE-ENVCMD",
     "DATABASE_URL": "postgres://u:VALUE-DBURL@h/db"
   },
   "sandbox": {
@@ -64,22 +104,26 @@ HARD_JSON = """{
           {
             "type": "command",
             "command": "wget --header='Authorization: Bearer VALUE-BEARER' https://hooks.example.com"
+          },
+          {
+            "type": "command",
+            "command": "wget --header='Authorization: Basic VALUEBASIC=' https://hooks.example.com"
+          },
+          {
+            "type": "command",
+            "command": "wget --header='PRIVATE-TOKEN: glpat-VALUEGLPAT' https://gitlab.example.com"
+          },
+          {
+            "type": "command",
+            "command": "deploy --key 123e4567-e89b-12d3-a456-426614174000"
+          },
+          {
+            "type": "command",
+            "command": "gh api --token ghp_VALUEGHP"
           }
         ]
       }
     ]
-  },
-  "mcpServers": {
-    "db": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "--key",
-        "VALUE-ARGLINE"
-      ],
-      "headers": { "Authorization": "Bearer VALUE-HEADER" },
-      "url": "https://mcp.example.com/sse?k=VALUE-URLQUERY"
-    }
   },
   "escaped": "VALUE-ESC\\"VALUE-AFTER-QUOTE"
 }
@@ -94,6 +138,10 @@ sandbox_mode = "workspace-write"
 developer_instructions = \"\"\"
 VALUE-MULTILINE
 \"\"\"
+notes = \"\"\"
+quoting '''
+VALUE-MIXEDML
+\"\"\"
 
 [mcp_servers.gh]
 command = "npx"
@@ -103,12 +151,18 @@ args = [
 ]
 http_headers = { "Authorization" = "Bearer VALUE-HEADER2" }
 
+[mcp_servers.nested]
+args = [
+  ["--token", "VALUE-NESTED"],
+]
+
 [mcp_servers.pg]
 command = "psql postgresql://u:VALUE-USERINFO@db.example.com/app"
 
 [mcp_servers.gh.env]
 GH_VALUE = "VALUE-TABLE"
 OTHER = 'VALUE-LITERAL'
+command = "VALUE-TABLECMD"
 
 [projects.'/home/u/src/keycloak-app']
 trust_level = "trusted"
@@ -126,22 +180,38 @@ set = { "DEPLOY_TOKEN" = "VALUE-INLINE" }
 
 HARD_SECRETS = [
     "VALUELONGTOKEN",
-    "VALUE-PAT",
-    "VALUE-DBURL",
-    "VALUE-BEARER",
+    "VALUE-ALLMAN",
+    "VALUE-NEXTLINE",
+    "VALUE-INLARG",
+    "VALUE-INLENV",
+    "VALUE-PAIRS",
+    "VALUE-INALLOW",
+    "VALUE-OPTMODEL",
     "VALUE-ARGLINE",
     "VALUE-HEADER",
     "VALUE-URLQUERY",
+    "VALUE-PAT",
+    "VALUE-ENVMODEL",
+    "VALUE-ENVCMD",
+    "VALUE-DBURL",
+    "VALUE-BEARER",
+    "VALUEBASIC",
+    "VALUEGLPAT",
+    "426614174000",
+    "VALUEGHP",
     "VALUE-ESC",
     "VALUE-AFTER-QUOTE",
     "VALUECOMMENT",
     "VALUE-MULTILINE",
+    "VALUE-MIXEDML",
     "VALUE-TOMLARG",
     "VALUE-HEADER2",
+    "VALUE-NESTED",
     "VALUE-USERINFO",
-    "VALUE-PASSWORD",
     "VALUE-TABLE",
     "VALUE-LITERAL",
+    "VALUE-TABLECMD",
+    "VALUE-PASSWORD",
     "VALUE-INLINE",
 ]
 
@@ -150,7 +220,12 @@ HARD_KEPT = {
     "hard.json": [
         '      "Bash(npm test)",',
         '      "Bash(gh auth status)",',
-        '    "deny": ["Read(./.env)", "Read(./secrets/**)"]',
+        '      "mcp__github__create_pull_request",',
+        '      "Bash(./run_all_integration_tests)",',
+        '    "deny": ["Read(./.env)", "Read(./secrets/**)"],',
+        '    "ask": ["Bash(git push:*)",',
+        '      "Bash(rm:*)"],',
+        '    "defaultMode": "acceptEdits"',
         '    "enabled": true,',
         '      "allowedDomains": ["github.com"]',
         '        "matcher": "Bash",',
@@ -168,6 +243,7 @@ HARD_KEPT = {
         "[projects.'/home/u/src/keycloak-app']",
         'trust_level = "trusted"',
         '\ttrust_level = "untrusted"',
+        "[shell_environment_policy]",
         'inherit = "all"',
     ],
 }
@@ -177,8 +253,9 @@ HARD_MASKED = {
     "hard.json": [
         '    "BASE_URL": "<redacted>",',
         '    "GITHUB_PAT": "<redacted>",',
+        '    "MODEL": "<redacted>",',
+        '    "command": "<redacted>",',
         '    "DATABASE_URL": "<redacted>"',
-        '      "<redacted>"',
         '        "<redacted>"',
         '      "headers": { "<redacted>": "<redacted>" },',
     ],
@@ -189,6 +266,21 @@ HARD_MASKED = {
         "OTHER = '<redacted>'",
         'set = { "<redacted>" = "<redacted>" }',
     ],
+}
+
+# A file saved on Windows: a byte order mark and CRLF line ends. The first line is a Check line,
+# so a mask that misreads the mark would change it.
+BOM_FILES = {
+    "settings.json": (
+        '{\n  "permissions": {\n    "defaultMode": "acceptEdits"\n  },\n'
+        '  "env": {\n    "K": "VALUE-BOM"\n  }\n}\n',
+        ["{", '    "defaultMode": "acceptEdits"'],
+    ),
+    "config.toml": (
+        'approval_policy = "never"\n[projects.\'/x\']\ntrust_level = "trusted"\n'
+        '[mcp_servers.a.env]\nK = "VALUE-BOM"\n',
+        ['approval_policy = "never"', "[projects.'/x']", 'trust_level = "trusted"'],
+    ),
 }
 
 
@@ -207,6 +299,15 @@ def _command(label: str) -> str:
 def _exe(*names: str) -> str:
     for name in names:
         found = shutil.which(name)
+        if name == "bash" and os.name == "nt" and found and "system32" in found.lower():
+            # On Windows, PATH may find the WSL launcher first; the agents' shell tools run
+            # Git Bash, so test that one.
+            git = shutil.which("git")
+            found = None
+            for parent in Path(git).resolve().parents if git else ():
+                if (parent / "bin" / "bash.exe").exists():
+                    found = str(parent / "bin" / "bash.exe")
+                    break
         if found:
             return found
     if os.environ.get("CI"):
@@ -262,7 +363,8 @@ def test_mask_hides_the_stand_canary_and_keeps_check_lines(mask, seed, tmp_path)
     assert CANARY.search(text), (
         "the seed must hold a canary for this test to mean anything"
     )
-    path = tmp_path / src.name
+    # The mask reads TOML by the file's extension, so the file keeps its real name.
+    path = tmp_path / src.name.removesuffix(".seed")
     path.write_bytes(text.encode("utf-8"))
 
     out = mask(path)
@@ -272,7 +374,7 @@ def test_mask_hides_the_stand_canary_and_keeps_check_lines(mask, seed, tmp_path)
         line
         for line in text.splitlines()
         if re.search(
-            r"allow|Bash\(|sandbox|enabled|approval_policy|trust_level|\[projects", line
+            r"allow|Bash\(|sandbox|enabled|approval_policy|trust_level|^\[", line
         )
         and not CANARY.search(line)
     ]
@@ -304,6 +406,23 @@ def test_mask_hides_secrets_in_the_harder_shapes(mask, name, body, tmp_path):
         assert line in out_lines, (
             f"{name}: a masked line lost its key or its shape: {line!r}"
         )
+    assert len(out_lines) == len(body.splitlines()), (
+        f"{name}: the mask dropped or added lines"
+    )
+
+
+@pytest.mark.parametrize("name", sorted(BOM_FILES))
+def test_mask_reads_a_file_saved_with_a_bom_and_crlf(mask, name, tmp_path):
+    body, kept = BOM_FILES[name]
+    path = tmp_path / name
+    path.write_bytes(("﻿" + body.replace("\n", "\r\n")).encode("utf-8"))
+
+    out = mask(path)
+
+    assert "VALUE-BOM" not in out, f"{name}: a value came through the mask"
+    out_lines = out.splitlines()
+    for line in kept:
+        assert line in out_lines, f"{name}: changed a line a Check reads: {line!r}"
     assert len(out_lines) == len(body.splitlines()), (
         f"{name}: the mask dropped or added lines"
     )
