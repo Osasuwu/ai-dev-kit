@@ -127,8 +127,9 @@ The same steps with `--harness codex`, with these differences.
 
 ## How to answer during an audit
 
-- Step 1: the agent (Claude Code or Codex CLI, no profile), "paid plan" or "API key",
-  "English".
+- Step 1: the agent (Claude Code or Codex CLI, no profile), the plan the account is really on
+  ("paid plan", "API key", or for Codex CLI "free plan"), "English". On a free Codex plan, check
+  `/status` when asked and say to go on.
 - Step 4, "run this one?": yes when the command only reads files inside `<stand>`, or is a
   read-only gh call, or fetches from `raw.githubusercontent.com/Osasuwu/ai-dev-kit`. No to
   anything else.

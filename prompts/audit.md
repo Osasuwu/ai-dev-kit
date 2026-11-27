@@ -4,9 +4,12 @@ The prompt below has your agent check your repo and your user-level agent config
 practice cards in [`INDEX.md`](../INDEX.md). It proposes fixes, applies the ones you agree to,
 one at a time, and ends with a watch list: the talks and pages behind the cards you are missing.
 
-**Supported:** Claude Code and OpenAI Codex CLI, on a paid plan or an API key. The audit takes
-many turns and changes files; a free quota that runs out halfway leaves a change half applied.
-Any other agent, or a free quota: use the interview prompt instead, in
+**Supported:** Claude Code on a paid plan or an API key, and OpenAI Codex CLI on any plan, the
+free one included. The audit takes many turns. On a free Codex plan, check the remaining limit in
+Codex's `/status` before you start: one audit of the kit's small test repo used 13% of a free
+quota, and a larger repo takes more. A run the quota cuts off leaves at most one change in
+progress, and the undo commands it gave you before its first change still put everything back.
+Any other agent, or any other free quota: use the interview prompt instead, in
 [English](interview.en.md) or [Russian](interview.ru.md).
 
 **What it may change:**
@@ -43,11 +46,12 @@ Rules for every step:
 - A clear yes from me is a yes. Silence, "maybe", or an answer to a different question is a no.
 
 Step 1. Check that this audit can run here.
-This audit is supported only in Claude Code and in OpenAI Codex CLI, on a paid plan or an API key. Say which agent you are, and ask me, in one message, and wait for my answer:
+This audit is supported only in Claude Code on a paid plan or an API key, and in OpenAI Codex CLI on any plan, the free one included. Say which agent you are, and ask me, in one message, and wait for my answer:
 (a) Am I running you in Claude Code, in Codex CLI, or in something else? For Codex CLI: did I start you with --profile, and which?
-(b) Am I on a paid plan or an API key, or on a free quota?
+(b) Am I on a paid plan or an API key, or on a free plan?
 (c) Which language should you write to me in?
-If you are not Claude Code or Codex CLI, or I answer "something else" or "free quota", or I leave (a) or (b) unanswered, tell me the audit is not supported here: it takes many turns and changes files, and a quota that runs out mid-change leaves a change half applied. Send me to the interview prompt instead, https://github.com/Osasuwu/ai-dev-kit/blob/main/prompts/interview.en.md in English or https://github.com/Osasuwu/ai-dev-kit/blob/main/prompts/interview.ru.md in Russian, and stop.
+If you are not Claude Code or Codex CLI, or I answer "something else", or you are Claude Code and I answer "free plan", or I leave (a) or (b) unanswered, tell me the audit is not supported here: it takes many turns and changes files, and a quota that runs out mid-change leaves a change half applied. Send me to the interview prompt instead, https://github.com/Osasuwu/ai-dev-kit/blob/main/prompts/interview.en.md in English or https://github.com/Osasuwu/ai-dev-kit/blob/main/prompts/interview.ru.md in Russian, and stop.
+If you are Codex CLI and I answer "free plan", ask me to check the remaining limit in /status first, and tell me what happens if the quota runs out mid-run: nothing changes before step 6, step 6 gives me the undo commands before its first change, and at most one change is in progress at a time, so those commands put everything back. Go on to step 2 only when I say to.
 
 Step 2. Fetch the index.
 Fetch https://raw.githubusercontent.com/Osasuwu/ai-dev-kit/main/INDEX.md. Each line that starts with "- " is one card: its kind (config, habit or belief), its title, why it matters, when it applies, and the failure classes it guards against. If you cannot fetch it, say "I could not fetch the kit" and stop. Do not answer from what you already know.
