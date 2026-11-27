@@ -56,7 +56,9 @@ GIT_DATE = "2026-11-22T00:00:00+00:00"
 # (.credentials.json, auth.json) are deliberately absent: they are never read.
 CLAUDE_WATCH = {
     "file": ("CLAUDE.md", "settings.json", "settings.local.json"),
-    "dir": ("agents", "commands", "hooks", "output-styles", "rules", "skills"),
+    "dir": ("agents", "commands", "hooks", "output-styles", "rules"),
+    # A folder like "dir", less skills/synced/: the Claude desktop app re-syncs it by itself.
+    "claude-skills": ("skills",),
     "mcp": (".claude.json",),
 }
 CODEX_WATCH = {
@@ -82,6 +84,8 @@ QUOTES = "'‘’‚‛"
 # runtime, not config.
 USER_CONFIG = {".claude": CLAUDE_WATCH, ".codex": CODEX_WATCH}
 HARNESS_OWNED = ".system"
+# The subfolder of a watched skills folder in the real home that the user does not write.
+NOT_THE_USERS = {"skills": HARNESS_OWNED, "claude-skills": "synced"}
 DEVICE_PREFIXES = ("\\\\", "//")
 # The read-only retry in reset applies on Windows only; a constant, so tests can reach it.
 WINDOWS = os.name == "nt"
@@ -242,15 +246,15 @@ def _digest(path: Path, kind: str) -> str | None:
     file. None when there is nothing there."""
     if kind == "file":
         return _hash(path)
-    if kind in ("dir", "skills"):
+    if kind == "dir" or kind in NOT_THE_USERS:
         if not path.is_dir():
             return None
+        skip = NOT_THE_USERS.get(kind)
         digest = hashlib.sha256()
         for child in sorted(
             p
             for p in path.rglob("*")
-            if p.is_file()
-            and (kind == "dir" or p.relative_to(path).parts[0] != HARNESS_OWNED)
+            if p.is_file() and p.relative_to(path).parts[0] != skip
         ):
             digest.update(child.relative_to(path).as_posix().encode() + b"\0")
             digest.update((_hash(child) or "").encode() + b"\0")
@@ -532,7 +536,8 @@ def _is_user_agent_config(rel: str) -> bool:
         return parts[1] in watch.get("file", ())
     if parts[1] in watch.get("skills", ()):
         return parts[2] != HARNESS_OWNED
-    return parts[1] in watch.get("dir", ())
+    # The desktop app syncs into the real home only, so in the stand all of skills/ counts.
+    return parts[1] in watch.get("dir", ()) + watch.get("claude-skills", ())
 
 
 def _is_agent_memory(parts: list[str]) -> bool:

@@ -34,8 +34,12 @@ Codex CLI audit and the chat interview. A person runs the paths and fills in
 - `setup` records hashes, never contents, of your real user-level config. That covers the
   rules and settings files of Claude Code and Codex, their `agents`, `hooks`, `rules`,
   `commands`, `skills`, `prompts` folders, the user MCP servers in `~/.claude.json`, and your
-  global git config. `check` hashes them again and prints `Real user-level config since setup:
-  unchanged` or `CHANGED`. It watches those places only, not every file in your home. Do not
+  global git config. Two `skills` subfolders are left out because something other than you
+  writes them: Codex's own `~/.codex/skills/.system/`, and `~/.claude/skills/synced/`, which
+  the Claude desktop app re-syncs by itself. A stand set up before that second exclusion
+  still counts a sync; `reset` it. `check` hashes them again and prints `Real user-level
+  config since setup: unchanged` or `CHANGED`. It watches those places only, not every file
+  in your home. Do not
   change your own agent config between `setup` and `check` (an "always allow", `/config`, a
   plugin toggle): `check` cannot tell your change from the agent's.
 - The token-shaped values in the stand are fake canaries (`CANARY-CANARY-...`).

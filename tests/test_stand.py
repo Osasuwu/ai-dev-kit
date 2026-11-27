@@ -642,6 +642,58 @@ def test_check_ignores_what_the_real_harness_rewrites_itself(tmp_path, real_home
     assert "Real user-level config since setup: unchanged" in report.lines
 
 
+def test_check_ignores_what_the_desktop_app_syncs_into_the_real_claude_skills(
+    tmp_path, real_home
+):
+    """The Claude desktop app re-syncs ~/.claude/skills/synced/ by itself, mid-run or not:
+    neither harness wrote it, so a sync is not a change to the user's config."""
+    synced = real_home / ".claude" / "skills" / "synced" / "a1b2"
+    (synced / "docx").mkdir(parents=True)
+    (synced / "docx" / "SKILL.md").write_text("v1\n")
+    (synced / ".last-complete-round").write_text("1\n")
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    (synced / "docx" / "SKILL.md").write_text("v2\n")
+    (synced / ".last-complete-round").write_text("2\n")
+    (synced / ".staging").mkdir()
+    (synced / ".staging" / "SKILL.md").write_text("v3\n")
+
+    report = stand.check(target)
+
+    assert report.reasons == []
+    assert "Real user-level config since setup: unchanged" in report.lines
+
+
+@pytest.mark.parametrize(
+    "rel,label",
+    [
+        # The user's own skill beside the app's synced/ folder.
+        (".claude/skills/mine/SKILL.md", ".claude/skills"),
+        # Only the desktop app owns synced/ in Claude Code's skills; in Codex's it is the
+        # user's own.
+        (".codex/skills/synced/s/SKILL.md", ".codex/skills"),
+    ],
+    ids=["claude_skill_beside_synced", "codex_skill_folder_named_synced"],
+)
+def test_check_still_counts_a_real_skill_change_outside_the_synced_folder(
+    tmp_path, real_home, rel, label
+):
+    synced = real_home / ".claude" / "skills" / "synced" / "a1b2" / "SKILL.md"
+    synced.parent.mkdir(parents=True)
+    synced.write_text("v1\n")
+    skill = real_home / rel
+    skill.parent.mkdir(parents=True, exist_ok=True)
+    skill.write_text("v1\n")
+    target = tmp_path / "stand"
+    stand.setup(target, "claude-code")
+    synced.write_text("v2\n")
+    skill.write_text("v2\n")
+
+    report = stand.check(target)
+
+    assert report.reasons == [f"real user-level config changed: {label}"]
+
+
 def test_check_watches_a_real_claude_skill_folder_named_system(tmp_path, real_home):
     """Only Codex owns skills/.system/; in Claude Code's skills it is the user's own."""
     skill = real_home / ".claude" / "skills" / ".system" / "s" / "SKILL.md"
