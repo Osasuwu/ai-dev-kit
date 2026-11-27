@@ -1,6 +1,7 @@
 # stand-app
 
-A small library that turns titles into URL slugs.
+A small library that turns titles into URL slugs. Its only users are two internal services,
+and both run it on Linux with Python 3.12, the one platform CI tests it on.
 
 ## Develop
 
