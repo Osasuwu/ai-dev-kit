@@ -169,8 +169,9 @@ when" in [`MANIFEST.md`](MANIFEST.md). `check` gives you, before the restore:
   start and rewrites the file in its own key order, and Codex appends a `[tui]` table holding
   only `screen_reader_detection_done = true` to `config.toml`. Any other difference in the
   file, beside those writes or instead of them, counts as a change, a deleted comment or a
-  `false` turned into `0` included. An agent that adds a `"theme"` string itself is the one
-  change `check` cannot tell from the harness's;
+  `false` turned into `0` included. An agent that writes one of those exact changes itself,
+  a `"theme"` string or that `[tui]` table, makes the only change `check` cannot tell from
+  the harness's;
 - agent config files added in the repo, or at user level in the places the harness reads
   config from (what the harness installs itself, `plugins/` and `skills/.system/`, is
   listed as runtime), agent memory written at user level,

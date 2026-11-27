@@ -99,7 +99,7 @@ REPO_AGENT_CONFIG_NAMES = {
 # adds a "theme" string. Codex CLI 0.172.0 appends exactly this table to config.toml.
 CLAUDE_SETTINGS = ".claude/settings.json"
 CODEX_CONFIG = ".codex/config.toml"
-CODEX_TUI = re.compile(r"\n*\[tui\]\nscreen_reader_detection_done = true\n*\Z")
+CODEX_TUI = re.compile(r"(?:\A|\n)\n*\[tui\]\nscreen_reader_detection_done = true\n*\Z")
 # The file Codex writes an allow rule into when a command is approved "don't ask again",
 # one rule per line, its pattern a list of string literals.
 APPROVAL_RULES = ".codex/rules/default.rules"

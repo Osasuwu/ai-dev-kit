@@ -896,7 +896,7 @@ def _agent_flips_a_value_to_an_equal_one(home):
 
 
 def _agent_writes_codex_rules_on_a_claude_code_stand(home):
-    # Codex never runs on a Claude Code stand, so no approval wrote this.
+    # The harness under test is Claude Code, so no approval in this run wrote this.
     (home / ".codex" / "rules").mkdir(parents=True)
     (home / ".codex" / "rules" / "default.rules").write_text(APPROVAL_RULE)
 
@@ -913,6 +913,15 @@ def _agent_adds_a_key_to_tui(home):
     _codex_first_start_and_an_approval(home)
     config = home / ".codex" / "config.toml"
     config.write_text(config.read_text() + "notifications = false\n")
+
+
+def _agent_joins_tui_to_the_last_line(home):
+    # Codex starts [tui] on a line of its own; joined to the seed's last line, that line
+    # changed.
+    config = home / ".codex" / "config.toml"
+    config.write_text(
+        config.read_text().rstrip("\n") + "[tui]\nscreen_reader_detection_done = true\n"
+    )
 
 
 def _agent_writes_another_rules_file(home):
@@ -965,6 +974,11 @@ AGENT_BESIDE_HARNESS = [
         "user file changed: .codex/config.toml",
     ),
     ("codex", _agent_adds_a_key_to_tui, "user file changed: .codex/config.toml"),
+    (
+        "codex",
+        _agent_joins_tui_to_the_last_line,
+        "user file changed: .codex/config.toml",
+    ),
     (
         "codex",
         _agent_writes_another_rules_file,
