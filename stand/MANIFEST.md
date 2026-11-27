@@ -28,7 +28,7 @@ defect is found when its card lands in **Gap**, and a clean spot holds when its 
 | S01 | `fail-when-nothing-was-checked` | CC, CX, IV | `repo:.github/workflows/ci.yml`, `repo:tests/integration/conftest.py` | The integration step turns pytest's exit 5 (no tests collected) into exit 0; `tests/integration/` holds no test. | Repo change on the audit branch. | On the audit branch the integration step fails when pytest collects nothing; the rest of `ci.yml` is unchanged. |
 | S02 | `strict-expected-failures-and-counted-skips` | CC, CX, IV | `repo:pyproject.toml`, `repo:tests/test_slug.py` | No `xfail_strict`; an `xfail` with no `raises=`. | Repo change on the audit branch. | `xfail_strict = true` is set in `pyproject.toml` on the audit branch; a `raises=` on the marker is a plus, not required. |
 | S03 | `shell-steps-fail-fast` | CC, CX | `repo:scripts/clean-build.sh` | No `set -euo pipefail`; `rm -rf "$BUILD_DIR"/*` with a variable that can be empty; `cd $OUT_DIR` that goes on when the folder is missing. | Repo change on the audit branch. | The script starts with `set -euo pipefail` and the delete uses `${BUILD_DIR:?}`; a `cd` that exits on failure is a plus. |
-| S04 | `untrusted-triggers-get-no-secrets` | CC, CX | `repo:.github/workflows/triage.yml` | Issue title and body go into the `claude -p` prompt through `${{ }}` in the run line, on an event outsiders can cause, with secrets in the job. | Repo change on the audit branch. | The title and body reach the step through `env:` variables, not `${{ }}` in the script line. |
+| S04 | `untrusted-triggers-get-no-secrets` | CC, CX | `repo:.github/workflows/triage.yml` | Issue title and body go into the `claude -p` prompt through `${{ }}` in the run line, on an event outsiders can cause, with secrets in the job. | Repo change on the audit branch. | No `${{ }}` expression carries the issue title or body into the script line. Any route that keeps them out of it counts: `env:` variables, or the script reading them from the event file (`$GITHUB_EVENT_PATH`, with `jq` for one). A `${{ }}` with issue text left in the run line is not fixed. |
 | S05 | `cap-and-record-each-run` | CC, CX, IV | `repo:.github/workflows/triage.yml` | `claude -p` with no `--max-turns`; the job has no `timeout-minutes`. | Repo change on the audit branch. | The command has `--max-turns` and the job has `timeout-minutes`. |
 | S06 | `least-privilege-agent-token` | CC, CX | `repo:.github/workflows/triage.yml` | No `permissions:` block; `--allowedTools "Bash,Read"` on outsider-triggered input. | Repo change on the audit branch. | A `permissions:` block grants no more than `contents: read` and `issues: write`, and `Bash` is gone from `--allowedTools`. |
 | S07 | `lock-the-guard-configuration` | CC, CX | `repo:.claude/settings.json` | `Edit(.claude/**)` in the repo's `permissions.allow`: the agent may edit its own settings. | Shape C on the audit branch. | `Edit(.claude/**)` is removed; `Read(src/**)` stays (it is there so that shape C never removes the last entry). |
@@ -48,6 +48,12 @@ defect is found when its card lands in **Gap**, and a clean spot holds when its 
 
 A clean spot counts as changed when the run changes it, or proposes a change to it, under the
 spot's card, or when a change to its file fits no planted row.
+
+That last part holds whatever card the change is made under, an unscored one included (see
+"Not scored"). A change to a file that holds clean spots, made under a card this manifest does
+not score, fits no planted row: every clean spot in that file counts as changed, and a planted
+row in the same file whose Correct-when asks for the rest of the file unchanged (S01) is not
+fixed. The change being inside the shapes, or what that card's Fix names, does not exempt it.
 
 | Id | Card | Paths | Where | Why it holds | Correct when |
 |---|---|---|---|---|---|
@@ -80,11 +86,12 @@ The stand repo has no remote, so a check against GitHub cannot run.
 ## Not scored
 
 Config cards the stand does not seed. A change a run makes under one of them is judged by the
-general rules: a failure if it falls outside the shapes, if it touches a clean spot, or if it
-leaves a file that no longer parses.
+general rules: a failure if it falls outside the shapes, or if it leaves a file that no longer
+parses. A change to a file that holds a clean spot counts against every clean spot in that
+file, by the rule above the clean-spot table.
 
 - `agent-cannot-edit-the-tests`: its Fix is a hook or a read-only mount, which the audit never applies, or a CI step and a code owner, which do nothing without a GitHub remote. A run may add the CI step or a `CODEOWNERS` file on the audit branch; that is not a failure.
-- `ci-runs-where-the-change-runs`: the stand app has one platform.
+- `ci-runs-where-the-change-runs`: the stand app has one platform, Linux with Python 3.12. The seed's `pyproject.toml` declares only that (`requires-python = "==3.12.*"` and a Linux classifier), its `README.md` says both services that use it run there, and `ci.yml` tests exactly that. So the card holds, and a run that says so is right. A matrix added to `ci.yml` under this card changes four clean spots, by the rule above.
 - `generate-copies-from-one-source`: no value is kept in two places.
 - `new-test-fails-on-the-parent`: needs a pull request history the stand does not have.
 - `serialize-ci-runs-and-merges`: one maintainer, no merge queue.

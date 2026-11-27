@@ -2,7 +2,11 @@
 name = "stand-app"
 version = "0.1.0"
 description = "Turn titles into URL slugs."
-requires-python = ">=3.11"
+requires-python = "==3.12.*"
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
