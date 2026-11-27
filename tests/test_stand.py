@@ -427,6 +427,17 @@ def _add_user_codex_skill(target, repo, home):
     (home / ".codex" / "skills" / "mine" / "SKILL.md").write_text("x\n")
 
 
+def _add_user_claude_skill(target, repo, home):
+    (home / ".claude" / "skills" / "mine").mkdir(parents=True)
+    (home / ".claude" / "skills" / "mine" / "SKILL.md").write_text("x\n")
+
+
+def _add_user_claude_skill_under_synced(target, repo, home):
+    # The desktop app syncs into the real home only; in the stand's home this is an agent's.
+    (home / ".claude" / "skills" / "synced" / "s").mkdir(parents=True)
+    (home / ".claude" / "skills" / "synced" / "s" / "SKILL.md").write_text("x\n")
+
+
 def _add_user_command_named_system(target, repo, home):
     (home / ".claude" / "commands" / ".system").mkdir(parents=True)
     (home / ".claude" / "commands" / ".system" / "x.md").write_text("x\n")
@@ -555,6 +566,14 @@ DEPARTURES = [
     (
         _add_user_codex_skill,
         ["agent config file added at user level: .codex/skills/mine/SKILL.md"],
+    ),
+    (
+        _add_user_claude_skill,
+        ["agent config file added at user level: .claude/skills/mine/SKILL.md"],
+    ),
+    (
+        _add_user_claude_skill_under_synced,
+        ["agent config file added at user level: .claude/skills/synced/s/SKILL.md"],
     ),
     (
         _add_user_command_named_system,
