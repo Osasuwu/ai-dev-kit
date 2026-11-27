@@ -2,12 +2,17 @@
 
 The audit reads the user's agent config files only through a mask command that `prompts/audit.md`
 gives for bash or zsh and for PowerShell. These tests take both commands from the prompt itself,
-run them on the stand's seeded config files and on a file of harder cases, and check that no
-secret value comes out while the lines the cards' Checks read come out unchanged.
+run them on the stand's seeded config files and on files of harder cases, and check that no
+secret value comes out while the values the cards' Checks read come out unchanged.
+
+Each command runs twice: fed on stdin, as a pasted line reaches a shell, and passed as one
+argument, as an agent's shell tool passes it. On Windows the second path re-quotes the command
+on its way to bash, which is where a mask that needs backslashes breaks.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -20,65 +25,170 @@ PROMPT = ROOT / "prompts" / "audit.md"
 SEEDS = ROOT / "stand" / "seed"
 CANARY = re.compile(r"CANARY-[A-Z0-9-]+")
 
+# Claude Code settings.json and .mcp.json shapes, pretty-printed the way the tools write them.
 HARD_JSON = """{
   "permissions": {
-    "allow": ["Bash(git status)"]
+    "allow": [
+      "Bash(npm test)",
+      "Bash(gh auth status)",
+      "Bash(deploy --token VALUELONGTOKEN0123456789abcdef)"
+    ],
+    "deny": ["Read(./.env)", "Read(./secrets/**)"]
   },
   "env": {
-    "DATABASE_URL": "postgres://u:VALUE-DBURL@h/db",
-    "PLAIN": "VALUE-PLAIN"
+    "BASE_URL": "${BASE_URL:-https://api.example.com}",
+    "GITHUB_PAT": "VALUE-PAT",
+    "DATABASE_URL": "postgres://u:VALUE-DBURL@h/db"
   },
-  "theme": "dark",
-  "headers": { "Authorization": "Bearer VALUE-BEARER" },
-  "escaped_token": "VALUE-ESC\\"VALUE-AFTER-QUOTE"
+  "sandbox": {
+    "enabled": true,
+    "network": {
+      "allowedDomains": ["github.com"]
+    }
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm test"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "wget --header='Authorization: Bearer VALUE-BEARER' https://hooks.example.com"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "db": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--key",
+        "VALUE-ARGLINE"
+      ],
+      "headers": { "Authorization": "Bearer VALUE-HEADER" },
+      "url": "https://mcp.example.com/sse?k=VALUE-URLQUERY"
+    }
+  },
+  "escaped": "VALUE-ESC\\"VALUE-AFTER-QUOTE"
 }
 """
 
-HARD_TOML = """model = "gpt-test"
+# Codex CLI config.toml shapes.
+HARD_TOML = """# комментарий без секретов
+model = "gpt-test"
 approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+# old key VALUECOMMENT0123456789abcdefgh
+developer_instructions = \"\"\"
+VALUE-MULTILINE
+\"\"\"
 
 [mcp_servers.gh]
 command = "npx"
-args = ["-y", "server", "--token", "VALUE-ARGS"]
-http_headers = { "Authorization" = "Bearer VALUE-HEADER" }
+args = [
+  "--api-key",
+  "VALUE-TOMLARG",
+]
+http_headers = { "Authorization" = "Bearer VALUE-HEADER2" }
+
+[mcp_servers.pg]
+command = "psql postgresql://u:VALUE-USERINFO@db.example.com/app"
 
 [mcp_servers.gh.env]
 GH_VALUE = "VALUE-TABLE"
 OTHER = 'VALUE-LITERAL'
 
-[profiles.work]
-name = "work-profile"
+[projects.'/home/u/src/keycloak-app']
+trust_level = "trusted"
+
+[projects.'/home/u/src/tabbed']
+\ttrust_level = "untrusted"
+
+[mcp_servers.mysql]
+command = "mysql --password=VALUE-PASSWORD"
 
 [shell_environment_policy]
+inherit = "all"
 set = { "DEPLOY_TOKEN" = "VALUE-INLINE" }
 """
 
 HARD_SECRETS = [
+    "VALUELONGTOKEN",
+    "VALUE-PAT",
     "VALUE-DBURL",
-    "VALUE-ESC",
-    "VALUE-PLAIN",
     "VALUE-BEARER",
-    "VALUE-AFTER-QUOTE",
-    "VALUE-ARGS",
+    "VALUE-ARGLINE",
     "VALUE-HEADER",
+    "VALUE-URLQUERY",
+    "VALUE-ESC",
+    "VALUE-AFTER-QUOTE",
+    "VALUECOMMENT",
+    "VALUE-MULTILINE",
+    "VALUE-TOMLARG",
+    "VALUE-HEADER2",
+    "VALUE-USERINFO",
+    "VALUE-PASSWORD",
     "VALUE-TABLE",
     "VALUE-LITERAL",
     "VALUE-INLINE",
 ]
 
-HARD_KEPT = [
-    '    "allow": ["Bash(git status)"]',
-    '  "theme": "dark",',
-    'model = "gpt-test"',
-    'approval_policy = "on-request"',
-    'command = "npx"',
-    'name = "work-profile"',
-]
+# Lines a card's Check reads: they must come out exactly as they went in.
+HARD_KEPT = {
+    "hard.json": [
+        '      "Bash(npm test)",',
+        '      "Bash(gh auth status)",',
+        '    "deny": ["Read(./.env)", "Read(./secrets/**)"]',
+        '    "enabled": true,',
+        '      "allowedDomains": ["github.com"]',
+        '        "matcher": "Bash",',
+        '            "type": "command",',
+        '            "command": "npm test"',
+        '      "command": "npx",',
+    ],
+    "hard.toml": [
+        "# комментарий без секретов",
+        'model = "gpt-test"',
+        'approval_policy = "on-request"',
+        'sandbox_mode = "workspace-write"',
+        "[mcp_servers.gh]",
+        'command = "npx"',
+        "[projects.'/home/u/src/keycloak-app']",
+        'trust_level = "trusted"',
+        '\ttrust_level = "untrusted"',
+        'inherit = "all"',
+    ],
+}
 
-# A masked line still names its key, so the agent can tell what is set without seeing the value.
+# Masked lines keep their key and their shape, so the agent can tell what is set.
 HARD_MASKED = {
-    "hard.json": ['    "DATABASE_URL": "<redacted>",', '    "PLAIN": "<redacted>"'],
-    "hard.toml": ['GH_VALUE = "<redacted>"', "OTHER = '<redacted>'"],
+    "hard.json": [
+        '    "BASE_URL": "<redacted>",',
+        '    "GITHUB_PAT": "<redacted>",',
+        '    "DATABASE_URL": "<redacted>"',
+        '      "<redacted>"',
+        '        "<redacted>"',
+        '      "headers": { "<redacted>": "<redacted>" },',
+    ],
+    "hard.toml": [
+        '  "<redacted>",',
+        'command = "<redacted>"',
+        'GH_VALUE = "<redacted>"',
+        "OTHER = '<redacted>'",
+        'set = { "<redacted>" = "<redacted>" }',
+    ],
 }
 
 
@@ -94,39 +204,47 @@ def _command(label: str) -> str:
     return found[0]
 
 
-def _powershell() -> str | None:
-    return shutil.which("pwsh") or shutil.which("powershell")
+def _exe(*names: str) -> str:
+    for name in names:
+        found = shutil.which(name)
+        if found:
+            return found
+    if os.environ.get("CI"):
+        pytest.fail(f"CI must have {' or '.join(names)} to test the mask")
+    pytest.skip(f"no {' or '.join(names)} on this machine")
 
 
-def _run_bash(path: Path) -> str:
-    bash = shutil.which("bash")
-    if bash is None:
-        pytest.skip("no bash on this machine")
-    cmd = _command("bash or zsh").replace('"FILE"', f'"{path.as_posix()}"')
-    # The command goes in on stdin, as a pasted line would: passed as an argument, Windows
-    # re-quotes it on the way to bash and collapses the backslashes the awk regexes need.
+def _run(args: list[str], stdin: str | None) -> str:
     out = subprocess.run(
-        [bash, "-s"], input=cmd + "\n", capture_output=True, text=True, check=True
-    )
-    return out.stdout
-
-
-def _run_powershell(path: Path) -> str:
-    exe = _powershell()
-    if exe is None:
-        pytest.skip("no PowerShell on this machine")
-    cmd = _command("PowerShell").replace('"FILE"', f'"{path}"')
-    out = subprocess.run(
-        [exe, "-NoProfile", "-NonInteractive", "-Command", "-"],
-        input=cmd + "\n",
-        capture_output=True,
-        text=True,
-        check=True,
+        args, input=stdin, capture_output=True, text=True, encoding="utf-8", check=True
     )
     return out.stdout.replace("\r\n", "\n")
 
 
-RUNNERS = {"bash": _run_bash, "powershell": _run_powershell}
+def _bash(path: Path, via: str) -> str:
+    bash = _exe("bash")
+    cmd = _command("bash or zsh").replace('"FILE"', f'"{path.as_posix()}"')
+    if via == "stdin":
+        return _run([bash, "-s"], cmd + "\n")
+    return _run([bash, "-c", cmd], None)
+
+
+def _powershell(path: Path, via: str) -> str:
+    exe = _exe("pwsh", "powershell")
+    cmd = _command("PowerShell").replace('"FILE"', f'"{path}"')
+    utf8 = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+    base = [exe, "-NoProfile", "-NonInteractive", "-Command"]
+    if via == "stdin":
+        return _run([*base, "-"], utf8 + cmd + "\n")
+    return _run([*base, utf8 + cmd], None)
+
+
+RUNNERS = {
+    "bash-stdin": lambda p: _bash(p, "stdin"),
+    "bash-arg": lambda p: _bash(p, "arg"),
+    "powershell-stdin": lambda p: _powershell(p, "stdin"),
+    "powershell-arg": lambda p: _powershell(p, "arg"),
+}
 
 
 @pytest.fixture(params=sorted(RUNNERS))
@@ -145,7 +263,7 @@ def test_mask_hides_the_stand_canary_and_keeps_check_lines(mask, seed, tmp_path)
         "the seed must hold a canary for this test to mean anything"
     )
     path = tmp_path / src.name
-    path.write_text(text, encoding="utf-8")
+    path.write_bytes(text.encode("utf-8"))
 
     out = mask(path)
 
@@ -153,13 +271,18 @@ def test_mask_hides_the_stand_canary_and_keeps_check_lines(mask, seed, tmp_path)
     kept = [
         line
         for line in text.splitlines()
-        if re.search(r"allow|Bash\(|sandbox|enabled|approval_policy|trust_level", line)
+        if re.search(
+            r"allow|Bash\(|sandbox|enabled|approval_policy|trust_level|\[projects", line
+        )
         and not CANARY.search(line)
     ]
     assert kept, "the seed must hold lines a card's Check reads"
     out_lines = out.splitlines()
     for line in kept:
         assert line in out_lines, f"{seed}: changed a line the Checks read: {line!r}"
+    assert len(out_lines) == len(text.splitlines()), (
+        f"{seed}: the mask dropped or added lines"
+    )
 
 
 @pytest.mark.parametrize(
@@ -167,16 +290,16 @@ def test_mask_hides_the_stand_canary_and_keeps_check_lines(mask, seed, tmp_path)
 )
 def test_mask_hides_secrets_in_the_harder_shapes(mask, name, body, tmp_path):
     path = tmp_path / name
-    path.write_text(body, encoding="utf-8")
+    path.write_bytes(body.encode("utf-8"))
 
     out = mask(path)
 
     leaked = [s for s in HARD_SECRETS if s in out]
     assert not leaked, f"{name}: values came through the mask: {leaked}"
     out_lines = out.splitlines()
-    for line in HARD_KEPT:
-        if line in body.splitlines():
-            assert line in out_lines, f"{name}: changed a line with no secret: {line!r}"
+    for line in HARD_KEPT[name]:
+        assert line in body.splitlines(), f"fixture error: {line!r} is not in {name}"
+        assert line in out_lines, f"{name}: changed a line a Check reads: {line!r}"
     for line in HARD_MASKED[name]:
         assert line in out_lines, (
             f"{name}: a masked line lost its key or its shape: {line!r}"
