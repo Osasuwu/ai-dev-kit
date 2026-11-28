@@ -20,6 +20,7 @@ Two prompts, one per kind of setup. Pick yours:
   - Claude Code on a paid plan or an API key, and OpenAI Codex CLI on any plan, also propose fixes and apply the ones you agree to, one at a time. Repo fixes go to a new branch it never pushes; user-level changes are limited to the kinds the prompt lists, and you get a restore command before the first one. On a free plan, check the remaining limit first.
   - Any other agent, or Claude Code on a free plan, runs it read-only: every fix goes on a list for you to make by hand.
   - On an agent the maintainers have not checked you can take part as a tester: the agent backs up your user-level config first, may apply fixes, and gives you a report to [send back](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=audit-tester-report.yml).
+  - Have several repos whose setup is not kept in sync? Give it their paths and it checks them in the same run: your user-level config once, each repo's config separately, with a table of which cards hold where. It changes files only in the repo you started it in. Each extra repo uses more of your quota, though less than a separate run.
   - At the end it offers to save a short result file outside the repo. Give it to the next run, and that run says what changed and does not propose again what you declined.
 - **No agent yet, or one that cannot run commands:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
 
