@@ -1,0 +1,42 @@
+name: Audit tester report
+description: You ran the audit prompt as a tester on an agent the maintainers have not checked. Send the tester report it gave you.
+title: "audit-tester: "
+labels: ["audit-tester"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public on GitHub. Read the report before you paste it: remove any secret value,
+        file contents, name, path or host from a private repo or from your machine. Your home folder
+        should appear only as ~. There is no turnaround promise; see the README's Support section.
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      description: For example the agent's name and the version it reports.
+    validations:
+      required: true
+  - type: dropdown
+    id: plan
+    attributes:
+      label: Plan
+      options:
+        - Paid plan
+        - API key
+        - Free quota
+    validations:
+      required: true
+  - type: input
+    id: steps
+    attributes:
+      label: Last step reached
+      description: The step number the audit reached, 1 to 8, and why it stopped if it stopped early.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Tester report
+      description: The tester report the audit gave you at the end, after your own check.
+    validations:
+      required: true
