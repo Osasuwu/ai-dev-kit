@@ -16,8 +16,12 @@ Everything below is about the places where that split leaks: a failure class is 
 
 Two prompts, one per kind of setup. Pick yours:
 
-- **Claude Code on a paid plan or an API key, or OpenAI Codex CLI on any plan, the free one included:** the [audit prompt](prompts/audit.md). On a free Codex plan, check the remaining limit in `/status` first. Your agent checks your repo and user-level config against the cards, proposes fixes, applies the ones you agree to, one at a time, and gives you a watch list. Repo fixes go to a new branch it never pushes; user-level changes are limited to the kinds the prompt lists, and you get a restore command before the first one.
-- **Any other agent, any other free quota, or no agent yet:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
+- **An agent that can run shell commands, read files and fetch a web page:** the [audit prompt](prompts/audit.md). Your agent checks your repo and user-level config against the cards and gives you a watch list that opens with at most three cards to start with.
+  - Claude Code on a paid plan or an API key, and OpenAI Codex CLI on any plan, also propose fixes and apply the ones you agree to, one at a time. Repo fixes go to a new branch it never pushes; user-level changes are limited to the kinds the prompt lists, and you get a restore command before the first one. On a free plan, check the remaining limit first.
+  - Any other agent, or Claude Code on a free plan, runs it read-only: every fix goes on a list for you to make by hand.
+  - On an agent the maintainers have not checked you can take part as a tester: the agent backs up your user-level config first, may apply fixes, and gives you a report to [send back](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=audit-tester-report.yml).
+  - At the end it offers to save a short result file outside the repo. Give it to the next run, and that run says what changed and does not propose again what you declined.
+- **No agent yet, or one that cannot run commands:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
 
 If the answer did not help, [say what was missing](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=base-not-enough.yml). The form asks which cards the agent reported (holds, does not hold or cannot tell from the audit; in place, gap or later from the interview) and which practice you missed. This repo and its issues are public: describe in your own words, and do not paste code or paths from a private repo.
 
