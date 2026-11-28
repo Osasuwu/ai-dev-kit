@@ -315,9 +315,15 @@ def _exe(*names: str) -> str:
     pytest.skip(f"no {' or '.join(names)} on this machine")
 
 
-def _run(args: list[str], stdin: str | None) -> str:
+def _run(args: list[str], stdin: str | None, env: dict[str, str] | None = None) -> str:
     out = subprocess.run(
-        args, input=stdin, capture_output=True, text=True, encoding="utf-8", check=True
+        args,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+        env=env,
     )
     return out.stdout.replace("\r\n", "\n")
 
@@ -335,9 +341,12 @@ def _powershell(path: Path, via: str) -> str:
     cmd = _command("PowerShell").replace('"FILE"', f'"{path}"')
     utf8 = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
     base = [exe, "-NoProfile", "-NonInteractive", "-Command"]
+    # pwsh on Linux reading stdin writes the terminal's keypad codes (ESC[?1h) into its
+    # output, taken from terminfo for $TERM; an agent's shell tool has no terminal either.
+    env = {**os.environ, "TERM": "dumb"}
     if via == "stdin":
-        return _run([*base, "-"], utf8 + cmd + "\n")
-    return _run([*base, utf8 + cmd], None)
+        return _run([*base, "-"], utf8 + cmd + "\n", env)
+    return _run([*base, utf8 + cmd], None, env)
 
 
 RUNNERS = {
