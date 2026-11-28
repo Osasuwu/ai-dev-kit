@@ -21,7 +21,7 @@ Two prompts, one per kind of setup. Pick yours:
   - Any other agent, or Claude Code on a free plan, runs it read-only: every fix goes on a list for you to make by hand.
   - On an agent the maintainers have not checked you can take part as a tester: the agent backs up your user-level config first, may apply fixes, and gives you a report to [send back](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=audit-tester-report.yml).
   - At the end it offers to save a short result file outside the repo. Give it to the next run, and that run says what changed and does not propose again what you declined.
-- **No agent yet:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
+- **No agent yet, or one that cannot run commands:** the interview prompt, in [English](prompts/interview.en.md) or [Russian](prompts/interview.ru.md). It asks how you work and builds your watch list from the cards.
 
 If the answer did not help, [say what was missing](https://github.com/Osasuwu/ai-dev-kit/issues/new?template=base-not-enough.yml). The form asks which cards the agent reported (holds, does not hold or cannot tell from the audit; in place, gap or later from the interview) and which practice you missed. This repo and its issues are public: describe in your own words, and do not paste code or paths from a private repo.
 
